@@ -12,7 +12,13 @@ Cloud GPUS are good but at some point beyond the budget...
 This is also a good opportunity to better understand the building and training of models.
 
 ## Disclaimer:
-**This is still a work in progress and scripts are not finished yet!**
+:construction: This is still a work in progress and scripts are not finished yet!
+
+## Task list
+- [] cleanup the readme
+- [] display nice pics of cats/dogs in the readme
+- [] add a predict function for one picture after the training
+
 
 ## Context
 We train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
@@ -28,7 +34,7 @@ This leads to 256000 pictures to train the model, which is CPU-wise a bit heavy.
 On my CPU, it takes 25 minutes per epoch (1 pass through the data).
 For that reason, I save the network parameters weights to load them again and continue the training.
 
-That happens to be convenient to transfer weights to new deeper versions of the network.
+That happened to be convenient to transfer weights to new deeper versions of the network.
 
 ## Weight transfer: first lessons learned
 I started with a very small network:
@@ -38,13 +44,9 @@ I started with a very small network:
     Layer (type)                 Output Shape              Param #   
     =================================================================
     conv2d_1 (Conv2D)            (None, 64, 64, 32)        896       
-    _________________________________________________________________
     max_pooling2d_1 (MaxPooling2 (None, 32, 32, 32)        0         
-    _________________________________________________________________
     flatten_1 (Flatten)          (None, 32768)             0         
-    _________________________________________________________________
     dense_1 (Dense)              (None, 128)               4194432   
-    _________________________________________________________________
     dense_2 (Dense)              (None, 1)                 129       
     =================================================================
     Total params: 4,195,457
@@ -52,9 +54,12 @@ I started with a very small network:
     Non-trainable params: 0
     _________________________________________________________________
 
-I train it and save the parameter weights.
-Then I add a new Convolution2D + MaxPool and transfer as many weights as possible to the new one.
-In practice, in this case, it works only with the first convolution layer.
+I trained it and saved the parameter weights.
+
+The accuracy rate was around 79%
+
+Then I added a new Convolution2D + MaxPool and transferred as many weights as possible to the new one.
+In practice, in this case, it worked only with the first convolution layer.
 
     classifier_2.summary()
 
@@ -79,6 +84,19 @@ In practice, in this case, it works only with the first convolution layer.
     Trainable params: 1,058,977
     Non-trainable params: 0
     _________________________________________________________________
+
+## Transferring the weights
+A full copy from a model to another identical model is quite easy.
+    # Reload saved weights back into classfier_1
+    classifier_2.load_weights("classifier2_final.h5")
+This loads all the weights stored in the classifier2_final.h5 into the model.
+
+Saving the weights:
+    classifier.save_weights("classifier2_tmp.h5")
+
+We cannot fully transfer all the weights as the models have different structures
+So the weight transfer will be only on the first layer
+
 
 ### Number of parameters    
 The first network, which is quite small, has 4 millions parameters, which is surprisingly high.
@@ -106,8 +124,6 @@ Transfer learning:
     
     Flatten and Max Pool has no trainable parameters then cannot be transferred
     
-    we cannot fully transfer as the shapes sizes differ
-    So the weight transfer will be only on the first layer
     classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
     Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
     
