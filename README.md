@@ -33,7 +33,9 @@ That happens to be convenient to transfer weights to new deeper versions of the 
 ## Weight transfer: first lessons learned
 I started with a very small network:
 
-    classifier_1.summary()
+"""
+classifier_1.summary()
+"""
 
 """
 Layer (type)                 Output Shape              Param #   
@@ -55,8 +57,36 @@ _________________________________________________________________
 """    
 
 I train it and save the parameter weights.
-Then I add a new Convolution2D + MaxPool and transfer 
+Then I add a new Convolution2D + MaxPool and transfer as many weights as possible to the new one.
+In practice, in this case, it works only with the first convolution layer.
 
+"""
+classifier_2.summary()
+"""
+
+"""
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+conv2d_2 (Conv2D)            (None, 64, 64, 32)        896       
+_________________________________________________________________
+max_pooling2d_2 (MaxPooling2 (None, 32, 32, 32)        0         
+_________________________________________________________________
+conv2d_3 (Conv2D)            (None, 32, 32, 32)        9248      
+_________________________________________________________________
+max_pooling2d_3 (MaxPooling2 (None, 16, 16, 32)        0         
+_________________________________________________________________
+flatten_2 (Flatten)          (None, 8192)              0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 128)               1048704   
+_________________________________________________________________
+dense_4 (Dense)              (None, 1)                 129       
+=================================================================
+Total params: 1,058,977
+Trainable params: 1,058,977
+Non-trainable params: 0
+_________________________________________________________________
+"""
 
     
 Surprisingly, the number of trainable parameters of the network has been divided by 4 after adding a Convolution + Max Pool block.
