@@ -4,11 +4,8 @@
 The principle is easy: optimize and accelerate the learning of a model by training specific layers,
 transfer them to a deeper model and iterate.
 
-[//]: # (The gradients are fully A kind of bottleneck effect forces the layers to )
-
 This is relevant when the compute capacity gets insufficient compared to the needs.
 Cloud GPUS are good but at some point beyond the budget...
-
 This is also a good opportunity to better understand the building and training of models.
 
 ## Disclaimer:
@@ -24,15 +21,26 @@ This is also a good opportunity to better understand the building and training o
 We train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
 
-## Data augmentation technique
-The data augmentation, generates variations out of original pictures.
-This is done by mirroring pictures left-right (doubling the dataset size), random cropping/zooming and rotating.
+Yes my friends, a big bunch of cute cat and dog pictures such as:
+
+<img src="dataset/training_set/cats/cat.998.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.2.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.400.jpg" width="100" height="120">
+<img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.400.jpg" width="100" height="120">
+
+Directly coming from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
+
+## Note about data augmentation
+10000 pictures is actually a very small dataset for computer vision. For that reason, the existing data is multiplicated by using a range of techniques:
+- mirroring pictures left-right (effectively doubling the dataset size)
+- random cropping/zooming
+- changing the colors
+
+The data augmentation generator produces many variations out of each original picture.
 This leads to a wider range of pictures and reduces overfitting.
 
-In practice, with a batch_size of 32, the data generator produces 32 new variations out of each original picture.
-This leads to 256000 pictures to train the model, which is CPU-wise a bit heavy.
-On my CPU, it takes 25 minutes per epoch (1 pass through the data).
-For that reason, I save the network parameters weights to load them again and continue the training.
+In practice, with a standard batch_size of 32, the data generator produced 32 new variations out of each original picture.
+This lead to 256000 pictures to train the model, and was CPU-wise a bit heavy.
+On my CPU, it took 25 minutes per epoch (1 pass through the data). Of course, better results would have most been reached in much less time using a decent GPU.
+For that reason, I saved the network parameters weights to conveniently load them again and continue the training later.
 
 That happened to be convenient to transfer weights to new deeper versions of the network.
 
@@ -54,16 +62,12 @@ I started with a very small network:
     Non-trainable params: 0
     _________________________________________________________________
 
-I trained it and saved the parameter weights.
-
-The accuracy rate was around 79%
-
-Then I added a new Convolution2D + MaxPool and transferred as many weights as possible to the new one.
-In practice, in this case, it worked only with the first convolution layer.
+I trained it and obtained an accuracy rate around 79%.
+Fair enough after a few epochs and not so much data.
+Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible to the new one.
 
     classifier_2.summary()
 
-    _________________________________________________________________
     Layer (type)                 Output Shape              Param #   
     =================================================================
     conv2d_2 (Conv2D)            (None, 64, 64, 32)        896       
@@ -81,19 +85,19 @@ In practice, in this case, it worked only with the first convolution layer.
 
 ## Transferring the weights
 A full copy from a model to another identical model is quite easy.
-
 Saving the weights of a model:
 
     classifier.save_weights("classifier2_tmp.h5")
     
-    # Reload saved weights back into classifier_2
+Loading the weights back into the classifier_2 model
+
     classifier_2.load_weights("classifier2_tmp.h5")
 
-This loads all the weights stored in the classifier2_final.h5 file into the classifier_2 model.
 
 ### Limits of weight transfer
-We actually cannot transfer all the weights between models with different structures.
-But it can be done partially, layer by layer.
+In practice, in this case, it worked only with the first convolution layer.
+We cannot transfer all the weights between models with different structures.
+But this can be done partially, layer by layer.
 
 First a model with the same structure has to be created and weights are loaded into it.
 Then we can transfer relevant weights layer per layer, as long as they have the same type and dimension.
