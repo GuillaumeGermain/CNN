@@ -8,9 +8,6 @@ This is relevant when the compute capacity gets insufficient compared to the nee
 Cloud GPUS are good but at some point beyond the budget...
 This is also a good opportunity to better understand the building and training of models.
 
-## Disclaimer:
-:construction: This is still a work in progress and scripts are not finished yet!
-
 ## Task list
 - [ ] cleanup the readme
 - [X] display nice pics of cats/dogs in the readme
@@ -27,7 +24,7 @@ Yes my friends, a big bunch of cute cat and dog pictures such as:
 <img src="dataset/training_set/cats/cat.998.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.2.jpg" width="100" height="120">
 <img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120">
 
-## Note about data augmentation
+## Data augmentation
 10000 pictures is actually very small for computer vision. For that reason, the existing data is multiplicated by a range of techniques:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
@@ -95,7 +92,7 @@ Loading the weights back into the classifier_2 model
 
 ### Limits of weight transfer
 In this case, it worked only with the first convolution layer.
-We cannot transfer all the weights between models with different structures.
+We cannot transfer all the weights between models if they have different structures.
 But this can be done partially, layer by layer.
 
 First, a model with the same structure has to be created and weights are loaded into it.
@@ -113,20 +110,21 @@ This can also be done more easily by saving and loading the whole model in the h
     classifier_new.load("classifier_model_tmp.h5")
 
 Then weights we can transferred layer per layer, as long as they have the same type and dimension.
+
     classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
 
 In this case, only the first layer could be transferred, due to some constaints.
-- Max Pooling has no trainable parameters, so nothing to transfer
-- Flatening is just taking the rank 2 feature matrix out of the convolution+MaxPool layers into a single rank 1 vector.
+1. Max Pooling has no trainable parameters, so nothing to transfer
+1. Flatening is just taking the rank 2 feature matrix out of the convolution+MaxPool layers into a single rank 1 vector.
 Also no trainable parameters.
-- After the new convolution+MaxPool in the new model, the feature vector size reduced from 32K to 8K. So it is not possible to load the weights.
+1. After the new convolution+MaxPool in the new model, the feature vector size reduced from 32K to 8K. So it is not possible to load the weights.
 
 At the end, only the first layer could be transferred.
-**But it had a positive effect!**
-
-I ran several epochs of the second deeper model with and without training effect to compare.
-- After weights transfer, the model reached quickly 82% validation accuracy and stagnated there
-- without transfer, the model reached quickly 82% validation accuracy and stagnated there
+**But it had a positive effect.**
+I checked it by fitting the second deeper model over several epochs.
+Once with weight transfer, once without.
+- After weights transfer, the model reached quickly 82% validation accuracy and stagnated at this level
+- without transfer, the model reached quickly 79% validation accuracy and stagnated there
 
 I believe that fitting over many more epochs would have increased the accuracy, but my CPU was not convenient for this.
 It was quite interesting to see that training on a very small network and transfer just the first convolution weights could immediately increase the performance of 3%.
@@ -158,12 +156,3 @@ Transfer learning:
     
     classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
     Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
-    
-   
-    It's not possible to transfer directly weights from a h5 file to a NN with a different structure
-    Then the weights are loaded back on a classifier with exactly the same structure as the saved NN weights
-    and the weights are transferred layer by layer from a NN to another
-    
-    classifier_final.h5 contains the weights of the first classifier after a few epochs
-
-, encoding information what the network could 
