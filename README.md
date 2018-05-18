@@ -68,12 +68,9 @@ In practice, in this case, it worked only with the first convolution layer.
     =================================================================
     conv2d_2 (Conv2D)            (None, 64, 64, 32)        896       
     max_pooling2d_2 (MaxPooling2 (None, 32, 32, 32)        0         
-    _________________________________________________________________
     conv2d_3 (Conv2D)            (None, 32, 32, 32)        9248      
     max_pooling2d_3 (MaxPooling2 (None, 16, 16, 32)        0         
-    _________________________________________________________________
     flatten_2 (Flatten)          (None, 8192)              0         
-    _________________________________________________________________
     dense_3 (Dense)              (None, 128)               1048704   
     dense_4 (Dense)              (None, 1)                 129       
     =================================================================
@@ -84,16 +81,38 @@ In practice, in this case, it worked only with the first convolution layer.
 
 ## Transferring the weights
 A full copy from a model to another identical model is quite easy.
-    # Reload saved weights back into classfier_1
-    classifier_2.load_weights("classifier2_final.h5")
-This loads all the weights stored in the classifier2_final.h5 into the model.
 
-Saving the weights:
+Saving the weights of a model:
+
     classifier.save_weights("classifier2_tmp.h5")
+    
+    # Reload saved weights back into classifier_2
+    classifier_2.load_weights("classifier2_tmp.h5")
 
-We cannot fully transfer all the weights as the models have different structures
-So the weight transfer will be only on the first layer
+This loads all the weights stored in the classifier2_final.h5 file into the classifier_2 model.
 
+### Limits of weight transfer
+We actually cannot transfer all the weights between models with different structures.
+But it can be done partially, layer by layer.
+
+First a model with the same structure has to be created and weights are loaded into it.
+Then we can transfer relevant weights layer per layer, as long as they have the same type and dimension.
+
+In this case, I could only transfer the first layer.
+- Max Pooling has no trainable parameters, then nothing to transfer
+- Flatening is just taking the rank 2 feature matrix out of the convolution+MaxPool layers into a single rank 1 vector.
+Also no trainable parameters.
+- After the new convolution+MaxPool in the new model, the feature vector size reduced from 32K to 8K. So it is not possible to load the weights.
+
+At the end, only the first layer could be transferred.
+**But it had a positive effect!**
+
+I ran several epochs of the second deeper model with and without training effect to compare.
+- After weights transfer, the model reached quickly 82% validation accuracy and stagnated there
+- without transfer, the model reached quickly 82% validation accuracy and stagnated there
+
+I believe that fitting over many more epochs would have increased the accuracy, but my CPU was not convenient for this.
+It was quite interesting to see that training on a very small network and transfer just the first convolution weights could immediately increase the performance of 3%.
 
 ### Number of parameters    
 The first network, which is quite small, has 4 millions parameters, which is surprisingly high.
@@ -119,7 +138,6 @@ Transfer learning:
     Here, only the first layer can be transferred as the structures are different
     This is enough to already increase the performance
     
-    Flatten and Max Pool has no trainable parameters then cannot be transferred
     
     classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
     Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
