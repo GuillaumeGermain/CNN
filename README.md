@@ -15,7 +15,7 @@ This is also a good opportunity to better understand the building and training o
 **This is still a work in progress and scripts are not finished yet!**
 
 ## Context
-Training a dog and cat recognizer over 10000 pictures.
+We train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
 
 ## Data augmentation technique
@@ -33,67 +33,70 @@ That happens to be convenient to transfer weights to new deeper versions of the 
 ## Weight transfer: first lessons learned
 I started with a very small network:
 
-"""
-classifier_1.summary()
-"""
+    classifier_1.summary()
 
-"""
-Layer (type)                 Output Shape              Param #   
-=================================================================
-conv2d_1 (Conv2D)            (None, 64, 64, 32)        896       
-_________________________________________________________________
-max_pooling2d_1 (MaxPooling2 (None, 32, 32, 32)        0         
-_________________________________________________________________
-flatten_1 (Flatten)          (None, 32768)             0         
-_________________________________________________________________
-dense_1 (Dense)              (None, 128)               4194432   
-_________________________________________________________________
-dense_2 (Dense)              (None, 1)                 129       
-=================================================================
-Total params: 4,195,457
-Trainable params: 4,195,457
-Non-trainable params: 0
-_________________________________________________________________
-"""    
+    Layer (type)                 Output Shape              Param #   
+    =================================================================
+    conv2d_1 (Conv2D)            (None, 64, 64, 32)        896       
+    _________________________________________________________________
+    max_pooling2d_1 (MaxPooling2 (None, 32, 32, 32)        0         
+    _________________________________________________________________
+    flatten_1 (Flatten)          (None, 32768)             0         
+    _________________________________________________________________
+    dense_1 (Dense)              (None, 128)               4194432   
+    _________________________________________________________________
+    dense_2 (Dense)              (None, 1)                 129       
+    =================================================================
+    Total params: 4,195,457
+    Trainable params: 4,195,457
+    Non-trainable params: 0
+    _________________________________________________________________
 
 I train it and save the parameter weights.
 Then I add a new Convolution2D + MaxPool and transfer as many weights as possible to the new one.
 In practice, in this case, it works only with the first convolution layer.
 
-"""
-classifier_2.summary()
-"""
+    classifier_2.summary()
 
-"""
-_________________________________________________________________
-Layer (type)                 Output Shape              Param #   
-=================================================================
-conv2d_2 (Conv2D)            (None, 64, 64, 32)        896       
-_________________________________________________________________
-max_pooling2d_2 (MaxPooling2 (None, 32, 32, 32)        0         
-_________________________________________________________________
-conv2d_3 (Conv2D)            (None, 32, 32, 32)        9248      
-_________________________________________________________________
-max_pooling2d_3 (MaxPooling2 (None, 16, 16, 32)        0         
-_________________________________________________________________
-flatten_2 (Flatten)          (None, 8192)              0         
-_________________________________________________________________
-dense_3 (Dense)              (None, 128)               1048704   
-_________________________________________________________________
-dense_4 (Dense)              (None, 1)                 129       
-=================================================================
-Total params: 1,058,977
-Trainable params: 1,058,977
-Non-trainable params: 0
-_________________________________________________________________
-"""
+    _________________________________________________________________
+    Layer (type)                 Output Shape              Param #   
+    =================================================================
+    conv2d_2 (Conv2D)            (None, 64, 64, 32)        896       
+    _________________________________________________________________
+    max_pooling2d_2 (MaxPooling2 (None, 32, 32, 32)        0         
+    _________________________________________________________________
+    conv2d_3 (Conv2D)            (None, 32, 32, 32)        9248      
+    _________________________________________________________________
+    max_pooling2d_3 (MaxPooling2 (None, 16, 16, 32)        0         
+    _________________________________________________________________
+    flatten_2 (Flatten)          (None, 8192)              0         
+    _________________________________________________________________
+    dense_3 (Dense)              (None, 128)               1048704   
+    _________________________________________________________________
+    dense_4 (Dense)              (None, 1)                 129       
+    =================================================================
+    Total params: 1,058,977
+    Trainable params: 1,058,977
+    Non-trainable params: 0
+    _________________________________________________________________
 
-    
-Surprisingly, the number of trainable parameters of the network has been divided by 4 after adding a Convolution + Max Pool block.
+### Number of parameters    
+The first network, which is quite small, has 4 millions parameters, which is surprisingly high.
 
-I tried
+This number of trainable parameters of the network, went down to 1 million in the second one!
+Intuitively I would have expected more parameters on a deeper network.
 
+In practice, most of the parameters are due to the the flattened vector before the fully connected layer at the end.
+This is the feature vector is produced by the Convolution blocks.
 
+The number of parameters between this feature vector and the first fully connected layer is:
+vector size x number of nodes (128).
+
+Its size is 32768 in the first network, and 8192 in the second => 4 times less parameters.
+
+The Max pool layer plays here a big role, as each Max Pool layer divides by 4 the number of the resulting information passed to later layers.
+
+Hence, more Convolution2D + Max Pooling layers means less trainable parameters.
 
 ### Misc
 Transfer learning:
@@ -108,12 +111,11 @@ Transfer learning:
     classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
     Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
     
-    Most of the parameters is the flattened vector size x number of nodes (128) of the first layer.
-    classifier_1 feature vector dim is 32768 and classifier_2 8192 -> 4 times less parameters
-    
+   
     It's not possible to transfer directly weights from a h5 file to a NN with a different structure
     Then the weights are loaded back on a classifier with exactly the same structure as the saved NN weights
     and the weights are transferred layer by layer from a NN to another
     
     classifier_final.h5 contains the weights of the first classifier after a few epochs
 
+, encoding information what the network could 
