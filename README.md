@@ -12,39 +12,39 @@ This is also a good opportunity to better understand the building and training o
 :construction: This is still a work in progress and scripts are not finished yet!
 
 ## Task list
-- [] cleanup the readme
-- [] display nice pics of cats/dogs in the readme
-- [] add a predict function for one picture after the training
+- [ ] cleanup the readme
+- [X] display nice pics of cats/dogs in the readme
+- [ ] add a predict function for one picture after the training
 
 
 ## Context
 We train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
+Directly coming from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
 
 Yes my friends, a big bunch of cute cat and dog pictures such as:
 
-<img src="dataset/training_set/cats/cat.998.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.2.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.400.jpg" width="100" height="120">
-<img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.400.jpg" width="100" height="120">
-
-Directly coming from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
+<img src="dataset/training_set/cats/cat.998.jpg" width="100" height="120"><img src="dataset/training_set/cats/cat.2.jpg" width="100" height="120">
+<img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120">
 
 ## Note about data augmentation
-10000 pictures is actually a very small dataset for computer vision. For that reason, the existing data is multiplicated by using a range of techniques:
+10000 pictures is actually very small for computer vision. For that reason, the existing data is multiplicated by a range of techniques:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
 - changing the colors
 
-The data augmentation generator produces many variations out of each original picture.
+The data augmentation generator produces variations out of each original picture.
 This leads to a wider range of pictures and reduces overfitting.
 
 In practice, with a standard batch_size of 32, the data generator produced 32 new variations out of each original picture.
-This lead to 256000 pictures to train the model, and was CPU-wise a bit heavy.
-On my CPU, it took 25 minutes per epoch (1 pass through the data). Of course, better results would have most been reached in much less time using a decent GPU.
+This lead to 256000 pictures to train the model, and was for my CPU a bit heavy.
+It took 25 minutes per epoch (1 pass through the data).
+Of course, better results would have most been reached in much less time using a decent GPU.
 For that reason, I saved the network parameters weights to conveniently load them again and continue the training later.
 
-That happened to be convenient to transfer weights to new deeper versions of the network.
+That happened to be convenient to transfer weights into new versions of the network.
 
-## Weight transfer: first lessons learned
+## Weight transfer
 I started with a very small network:
 
     classifier_1.summary()
@@ -64,7 +64,7 @@ I started with a very small network:
 
 I trained it and obtained an accuracy rate around 79%.
 Fair enough after a few epochs and not so much data.
-Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible to the new one.
+Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible into the new one.
 
     classifier_2.summary()
 
@@ -83,9 +83,8 @@ Then I added a new Convolution2D + MaxPool block and transferred as many weights
     Non-trainable params: 0
     _________________________________________________________________
 
-## Transferring the weights
-A full copy from a model to another identical model is quite easy.
-Saving the weights of a model:
+A full copy from a model to another identical model is actually quite easy.
+Saving the weights of a classifier model:
 
     classifier.save_weights("classifier2_tmp.h5")
     
@@ -95,15 +94,29 @@ Loading the weights back into the classifier_2 model
 
 
 ### Limits of weight transfer
-In practice, in this case, it worked only with the first convolution layer.
+In this case, it worked only with the first convolution layer.
 We cannot transfer all the weights between models with different structures.
 But this can be done partially, layer by layer.
 
-First a model with the same structure has to be created and weights are loaded into it.
-Then we can transfer relevant weights layer per layer, as long as they have the same type and dimension.
+First, a model with the same structure has to be created and weights are loaded into it.
 
-In this case, I could only transfer the first layer.
-- Max Pooling has no trainable parameters, then nothing to transfer
+    classifier_1 = Sequential()
+    classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+    classifier_1.add(MaxPooling2D(pool_size=(2,2)))
+    classifier_1.add(Flatten())
+    classifier_1.add(Dense(128, activation='relu'))
+    classifier_1.add(Dense(1, activation='sigmoid'))
+
+This can also be done more easily by saving and loading the whole model in the h5 file.
+
+    classifier.save("classifier_model_tmp.h5")
+    classifier_new.load("classifier_model_tmp.h5")
+
+Then weights we can transferred layer per layer, as long as they have the same type and dimension.
+    classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
+
+In this case, only the first layer could be transferred, due to some constaints.
+- Max Pooling has no trainable parameters, so nothing to transfer
 - Flatening is just taking the rank 2 feature matrix out of the convolution+MaxPool layers into a single rank 1 vector.
 Also no trainable parameters.
 - After the new convolution+MaxPool in the new model, the feature vector size reduced from 32K to 8K. So it is not possible to load the weights.
@@ -118,7 +131,7 @@ I ran several epochs of the second deeper model with and without training effect
 I believe that fitting over many more epochs would have increased the accuracy, but my CPU was not convenient for this.
 It was quite interesting to see that training on a very small network and transfer just the first convolution weights could immediately increase the performance of 3%.
 
-### Number of parameters    
+### Number of trainable parameters    
 The first network, which is quite small, has 4 millions parameters, which is surprisingly high.
 
 This number of trainable parameters of the network, went down to 1 million in the second one!
