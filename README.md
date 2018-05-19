@@ -144,31 +144,20 @@ Then weights can then be transferred layer per layer, as long as they have the s
 
     classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
 
-In this case, only the first layer could be transferred, due to some constaints.
-1. Max Pooling has no trainable parameters, so nothing to transfer
-1. Flattening just flattens a rank 2 matrix into a flat vector, of course no trainable parameters.
-1. After the new convolution block in the new model, the feature vector size reduced from 32K to 8K. Dimensions differ, this layer cannot be transferred
-1. It does not make any sense to transfer the last layer as it is based on completely different layers.
+In this case, only the first layer could be transferred, due to some limits.
+- Max Pooling has no trainable parameters, so nothing to transfer
+- Flattening just flattens a rank 2 matrix into a flat vector, of course no trainable parameters.
+- After the new convolution block in the new model, the feature vector size reduced from 32K to 8K. Dimensions differ, this layer cannot be transferred
+- It does not make any sense to transfer the last layer as it is based on completely different layers.
 
-At the end, only the first layer could be transferred.
-**But it had a positive effect.**
+At the end, only the first layer could be transferred, **but it had a positive effect.**
+
 I checked it by fitting the second deeper model over several epochs.
 Once with weight transfer, once without.
 - After weights transfer, the model reached quickly 82% validation accuracy and stagnated at this level
 - without transfer, the model reached quickly 79% validation accuracy and stagnated there
 
-It was quite interesting to see that training on a very small network and transfer just the first convolution weights could immediately increase the performance of 3%.
+# Conclusion
+It's quite interesting to see that training a very small network and just transferring its first convolution weights immediately increases the performance of 3% of the second network.
 I believe that pushing this a bit more, training longer the first model before transferring the weight would result in a better accuracy.
 Also, fitting the second model over more epochs would have increased the accuracy, but my CPU was not convenient for this.
-
-
-### Misc
-Transfer learning:
-    copy the trained weights from one NN to another
-    Here, only the first layer can be transferred as the structures are different
-    This is enough to already increase the performance
-    Of course, better results would have most been reached in much less time using a decent GPU.
-
-    
-    classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
-    Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
