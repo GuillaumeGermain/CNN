@@ -9,10 +9,10 @@ Cloud GPUS are good but at some point beyond the budget...
 This is also a good opportunity to better understand the building and training of models.
 
 ## Task list
-- [ ] cleanup the readme
+- [X] cleanup the readme
 - [X] display nice pics of cats/dogs in the readme
 - [ ] add a predict function for one picture after the training
-
+- [ ] train these models during a decent number of epochs
 
 ## Context
 Let's train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
@@ -158,6 +158,6 @@ Once with weight transfer, once without.
 - without transfer, the model reached quickly 79% validation accuracy and stagnated there
 
 # Conclusion
-It's quite interesting to see that training a very small network and just transferring its first convolution weights immediately increases the performance of 3% of the second network.
-I believe that pushing this a bit more, training longer the first model before transferring the weight would result in a better accuracy.
-Also, fitting the second model over more epochs would have increased the accuracy, but my CPU was not convenient for this.
+It's quite interesting to see that training a very small network and just transferring its first convolution weights immediately increases the performance of 3% of the second network. And this advantage lasts over at least a few training epochs.
+I believe that this small advantage also transfers on bigger models and can save quite some computing time.
+Pushing this a bit more, training longer the first model before transferring the weights could result in a better accuracy.
