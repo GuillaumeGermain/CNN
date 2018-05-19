@@ -41,8 +41,31 @@ For that reason, I saved the network parameters weights to conveniently load the
 
 That happened to be convenient to transfer weights into new versions of the network.
 
-## Model fitting
-I started with a small network:
+## Building the model
+Here I build 2 simple models
+
+    classifier_1 = Sequential()
+    classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+    classifier_1.add(MaxPooling2D(pool_size=(2,2)))
+    classifier_1.add(Flatten())
+    classifier_1.add(Dense(128, activation='relu'))
+    classifier_1.add(Dense(1, activation='sigmoid'))
+
+    classifier_2 = Sequential()
+    classifier_2.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+    classifier_2.add(MaxPooling2D(pool_size=(2,2)))
+    classifier_2.add(Convolution2D(32, kernel_size=(3,3), padding='same', activation='relu'))
+    classifier_2.add(MaxPooling2D(pool_size=(2,2)))
+    classifier_2.add(Flatten())
+    classifier_2.add(Dense(128, activation='relu'))
+    classifier_2.add(Dense(1, activation='sigmoid'))
+
+## Remark about the neural network and trainable parameters    
+Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures means a lot of processing. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network, say 1000 nodes, and you have 12M parameters.
+
+That's where convolution networks come handy. They contain in comparison very few parameters and, coupled with a typical max pooling, encode important features from the picture while significantly reducing the size of the resulting feature vector.
+
+We can see this in these 2 summaries:
 
     classifier_1.summary()
 
@@ -59,9 +82,7 @@ I started with a small network:
     Non-trainable params: 0
     _________________________________________________________________
 
-I trained it and obtained an accuracy rate around 79%.
-Fair enough after only a few epochs and not so much data.
-Then I added a new Convolution2D + MaxPool block
+The second network has one more convolution block (conv2d + max pooling)
 
     classifier_2.summary()
 
@@ -80,44 +101,54 @@ Then I added a new Convolution2D + MaxPool block
     Non-trainable params: 0
     _________________________________________________________________
 
-Then, I transferred as many weights as possible into the new one.
-A full copy from a model to another identical model is actually quite easy.
-Saving the weights of a classifier model into a file:
 
-    classifier.save_weights("classifier2_tmp.h5")
+The first network, which is quite small, has already 4 millions parameters.
+The second one, although deeper, has 1 million, 4 times less!
+Intuitively we would have expected more parameters on a deeper network, wouldn't we?
+In practice, each convolution block compresses the data dimension.
+The resulting feature dimension is 32768 in the first network, and 8192 in the second => 4 times less parameters.
+
+Most of the parameters are actually between this resulting feature vector and the begining of the standard neural network (dense_n in the table).
+The flattening itself transforms the resulting matrix into a flat vector, keeping the same dimention.
+The number of parameters between this feature vector and the first fully connected layer is vector dimension x number of nodes (128) + number of biases (128 again).
+
+So overall, when building a CNN, adding more convolutions blocks actually means less trainable parameters.
+
+## Model fitting
+Starting with the smaller network, I trained it and obtained a 79% accuracy rate after a few epochs.
+Fair enough without a GPU, only a few epochs and not so much data.
+
+Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible into the new one.
+A full copy from a model to another identical model is actually quite easy.
+
+Storing the trained weights of a classifier model into a file is useful to reload it later:
+
+    classifier_2.save_weights("classifier2_tmp.h5")
     
-Loading the weights into another classifier_2 model
+Loading these weights again:
 
     classifier_2.load_weights("classifier2_tmp.h5")
 
 ### Limits of weight transfer
 We can transfer the whole set of weights from the file only if the encoded model and the new model have the same structure and dimensions.
-If not, we can still transfer weight layer by layer, which I did.
+If not, we can still transfer weight layer by layer.
 
 First, a model with exactly the same structure has to be created and weights are loaded into it.
 Either like this:
-
-    classifier_1 = Sequential()
-    classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
-    classifier_1.add(MaxPooling2D(pool_size=(2,2)))
-    classifier_1.add(Flatten())
-    classifier_1.add(Dense(128, activation='relu'))
-    classifier_1.add(Dense(1, activation='sigmoid'))
-
 Or more conveniently by saving and loading the whole model into and from the h5 file.
 
     classifier.save("classifier_model_tmp.h5")
     classifier_new.load("classifier_model_tmp.h5")
 
-Then weights we can transferred layer per layer, as long as they have the same type and dimension.
+Then weights can then be transferred layer per layer, as long as they have the same type and dimension.
 
     classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
 
 In this case, only the first layer could be transferred, due to some constaints.
 1. Max Pooling has no trainable parameters, so nothing to transfer
-1. Flatening is just taking the rank 2 feature matrix out of the convolution+MaxPool layers into a single rank 1 vector.
-Also no trainable parameters.
-1. After the new convolution+MaxPool in the new model, the feature vector size reduced from 32K to 8K. So it is not possible to load the weights.
+1. Flattening just flattens a rank 2 matrix into a flat vector, of course no trainable parameters.
+1. After the new convolution block in the new model, the feature vector size reduced from 32K to 8K. Dimensions differ, this layer cannot be transferred
+1. It does not make any sense to transfer the last layer as it is based on completely different layers.
 
 At the end, only the first layer could be transferred.
 **But it had a positive effect.**
@@ -130,23 +161,6 @@ It was quite interesting to see that training on a very small network and transf
 I believe that pushing this a bit more, training longer the first model before transferring the weight would result in a better accuracy.
 Also, fitting the second model over more epochs would have increased the accuracy, but my CPU was not convenient for this.
 
-## Number of trainable parameters    
-The first network, which is quite small, has 4 millions parameters, which is surprisingly high.
-
-This number of trainable parameters of the network, went down to 1 million in the second one!
-Intuitively I would have expected more parameters on a deeper network.
-
-In practice, most of the parameters are due to the the flattened vector before the fully connected layer at the end.
-This is the feature vector is produced by the Convolution blocks.
-
-The number of parameters between this feature vector and the first fully connected layer is:
-vector size x number of nodes (128).
-
-Its size is 32768 in the first network, and 8192 in the second => 4 times less parameters.
-
-The Max pool layer plays here a big role, as each Max Pool layer divides by 4 the number of the resulting information passed to later layers.
-
-Hence, more Convolution2D + Max Pooling layers means less trainable parameters.
 
 ### Misc
 Transfer learning:
