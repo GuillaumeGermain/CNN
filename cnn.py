@@ -8,9 +8,8 @@ from keras.layers import Convolution2D
 from keras.layers import MaxPooling2D
 from keras.layers import Flatten
 from keras.layers import Dense
-from keras.preprocessing.image import ImageDataGenerator
 
-from cnn_util import print_file_layers
+from cnn_util import print_file_layers, train_classifier
 
 
 # First simpler CNN version
@@ -80,7 +79,30 @@ print_file_layers(filename)
 
 
 # Reload saved weights back into classfier_1
+filename = "classifier_final.h5"
 classifier_1.load_weights(filename)
+
+# Further train classifier 1
+#...
+
+
+# Save classifier_1 weights
+classifier_1.load_weights(filename)
+classifier_1.compile('adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+
+# Save classifier_1 weights + structure
+classifier_1.save("classifier_final_all.h5")
+del classifier_1
+
+# Load again
+from keras.models import load_model
+model = load_model("classifier_final_all.h5")
+model.summary()
+
+model.save("classifier_1_epoch_45.h5")
+
+
 
 # Apply previous weights to the first Conv2D into classifier_2
 classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
@@ -93,36 +115,8 @@ classifier_2.load_weights(filename)
 
 
 
-# Compile and train the CNN
-def train_classifier(classifier, epochs):
-    classifier.compile('adam', loss='binary_crossentropy', metrics=['accuracy'])
-    
-    train_datagen = ImageDataGenerator(rescale=1./255,
-                                       shear_range=0.2,
-                                       zoom_range=0.2,
-                                       horizontal_flip=True)
-    
-    test_datagen = ImageDataGenerator(rescale=1./255)
-    
-    training_set = train_datagen.flow_from_directory('dataset/training_set',
-                                                     target_size=(64, 64),
-                                                     batch_size=16, #32
-                                                     class_mode='binary')
-    
-    test_set = test_datagen.flow_from_directory('dataset/test_set',
-                                                target_size=(64, 64),
-                                                batch_size=32,
-                                                class_mode='binary')
-    
-    history = classifier.fit_generator(training_set,
-                         steps_per_epoch=8000,
-                         epochs=epochs,
-                         validation_data=test_set,
-                         validation_steps=2000)
-    classifier.save_weights("classifier2_1.h5")
-    return history
-
-history = train_classifier(classifier_2, 1)
+history = History()
+history = train_classifier(model, epochs=100, verbose=2)
 
 
 # acc .9766 val_acc .8240 
@@ -131,9 +125,31 @@ history = train_classifier(classifier_2, 1)
 
 #X_test_custom = 
 
+train_datagen = ImageDataGenerator(rescale=1./255,
+                                   shear_range=0.2,
+                                   zoom_range=0.2,
+                                   horizontal_flip=True)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+
+training_set = train_datagen.flow_from_directory('dataset/training_set',
+                                                 target_size=(64, 64),
+                                                 batch_size=32, #32
+                                                 class_mode='binary')
+
+from keras.preprocessing.image import DirectoryIterator
+DirectoryIterator.__doc__
+
+test_set = test_datagen.flow_from_directory('dataset/test_set',
+                                            target_size=(64, 64),
+                                            batch_size=32,
+                                            class_mode='binary')
+
+
 score = classifier_2.evaluate(X_test, y_test, batch_size=128)
 
-
+plot()
 
 
 
