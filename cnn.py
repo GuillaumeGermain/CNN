@@ -9,7 +9,7 @@ from keras.layers import MaxPooling2D
 from keras.layers import Flatten
 from keras.layers import Dense
 
-from cnn_util import print_file_layers, train_classifier
+from cnn_util import print_file_layers, train_model
 
 
 # First simpler CNN version
@@ -19,6 +19,17 @@ classifier_1.add(MaxPooling2D(pool_size=(2,2)))
 classifier_1.add(Flatten())
 classifier_1.add(Dense(128, activation='relu'))
 classifier_1.add(Dense(1, activation='sigmoid'))
+
+classifier_1.layers
+
+classifier_1 = Sequential()
+classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+classifier_1.add(MaxPooling2D(pool_size=(2,2)))
+classifier_1.add(Flatten())
+classifier_1.add(Dense(128, activation='relu'))
+classifier_1.add(Dense(1, activation='sigmoid'))
+
+
 
 
 # Build a new deeper classifer
@@ -116,7 +127,7 @@ classifier_2.load_weights(filename)
 
 
 history = History()
-history = train_classifier(model, epochs=100, verbose=2)
+history = train_model(model, epochs=100, verbose=2)
 
 
 # acc .9766 val_acc .8240 

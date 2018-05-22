@@ -12,7 +12,7 @@ This is also a good opportunity to better understand the building and training o
 - [X] cleanup the readme
 - [X] display nice pics of cats/dogs in the readme
 - [ ] add a predict function for one picture after the training
-- [ ] train these models during a decent number of epochs
+- [ ] train these models over a decent number of epochs
 
 ## Context
 Let's train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
@@ -34,9 +34,10 @@ The data augmentation generator produces variations out of each original picture
 This leads to a wider range of pictures and reduces overfitting.
 The test dataset is also augmented with the same technique.
 
-In practice, with a standard batch_size of 32, the data generator produced 32 new variations out of each original picture.
-This lead to 256000 pictures to train the model, and was for my CPU a bit heavy.
-It took 25 minutes per epoch (1 pass through the data).
+In practice, with a standard batch_size of 32, the data generator produces new variations out of each original picture, 32 at once.
+Increasing this batch_size normally leads to a faster performance up to a certain limit.
+On my CPU and RAM, it was faster with a batch_size of 16 than 32.
+Overall, it took 25 minutes per epoch (1 pass through the data).
 For that reason, I saved the network parameters weights to conveniently load them again and continue the training later.
 
 That happened to be convenient to transfer weights into new versions of the network.
