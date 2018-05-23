@@ -161,7 +161,54 @@ Once with weight transfer, once without.
 - After weights transfer, the model reached quickly 82% validation accuracy and stagnated at this level
 - without transfer, the model reached quickly 79% validation accuracy and stagnated there
 
-# Conclusion
+## Conclusion
 It's quite interesting to see that training a very small network and just transferring its first convolution weights immediately increases the performance of 3% of the second network. And this advantage lasts over at least a few training epochs.
 I believe that this small advantage also transfers on bigger models and can save quite some computing time.
 Pushing this a bit more, training longer the first model before transferring the weights could result in a better accuracy.
+
+# Further progress
+I trained a few models and of course used the recommended Adam optimizer. It speeds up the convergence at first and then slows down later not to overshoot while oscillating around an optimum.
+
+I wanted to check the value of the learning rate over the last epoch. I got actually crazy looking for this simple information.
+It is surpringly hard to find. Basically, I did not find it. Most methods I found basically were returning only the INITIAL learning rate, you know, before decay and momentum. It looks like it's obvious I should have gotten it simply by calculating it. OK...
+
+Well, looking for this futile information, I have also been digging into any possible forum and Keras documentation, the Keras object model, layer and optimizer variables.
+I could only get the INITIAL learning rate, before 
+Maybe I'll find it once I won't care about it anymore.
+Definitively useful.
+
+### Some findings:
+**Reduce LR on plateau**:
+
+    callback_list = []
+    
+    # Reduce LR on plateau
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                          patience=5, min_lr=1.e-5)
+    callback_list.append(reduce_lr)
+    model.compile('adam', loss='binary_crossentropy', metrics=metric_list)
+
+    history = model.fit_generator(training_set,
+                         steps_per_epoch=train_size,
+                         epochs=initial_epoch + new_epochs,
+                         validation_data=test_set,
+                         validation_steps=test_size,
+                         initial_epoch=initial_epoch,
+                         callbacks=callback_list)
+
+This triggers a 80% reduction of the learning rate once a plateau has been reached, after a default "patience" of 5 epochs.
+According to the documentation and a few blogs, most models benefit from it. The obvious reason is that at some point, the model is at "learning rate" distance from a mimimum. Hence, it keeps jumping too far to the other side of that target.
+Then making smaller steps enables getting closer to it.
+
+A simple way to dig into the model object:
+
+    vars(model)
+    vars(model.optimizer)
+    vars(model.layers)
+
+This simple approach enables to understand the internal structure of the Keras object model and look where specific data is located.
+The initial learning rate is for instance located **here**:
+
+    model.optimizer.lr
+
+So damn simple...
