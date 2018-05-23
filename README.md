@@ -11,8 +11,11 @@ This is also a good opportunity to better understand the building and training o
 ## Task list
 - [X] cleanup the readme
 - [X] display nice pics of cats/dogs in the readme
+- [X] train these models over a decent number of epochs
+- [ ] reduce variance with relevant regularisation
+- [ ] push a model with 2-3 conv blocks over 90% val accuracy
 - [ ] add a predict function for one picture after the training
-- [ ] train these models over a decent number of epochs
+- [ ] display last used learning rate
 
 ## Context
 Let's train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
