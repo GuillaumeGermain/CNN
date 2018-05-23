@@ -170,15 +170,51 @@ Pushing this a bit more, training longer the first model before transferring the
 I trained a few models and of course used the recommended Adam optimizer. It speeds up the convergence at first and then slows down later not to overshoot while oscillating around an optimum.
 
 I wanted to check the value of the learning rate over the last epoch. I got actually crazy looking for this simple information.
-It is surpringly hard to find. Basically, I did not find it. Most methods I found basically were returning only the INITIAL learning rate, you know, before decay and momentum. It looks like it's obvious I should have gotten it simply by calculating it. OK...
+It is surpringly hard to find. Serious, I did not find it. Most methods I found returned only the INITIAL learning rate, you know, before decay and momentum. Or one very smart method could return it, because it was manually modified and easy to provide.
+The only reliable way, at the end, is to manually calculate the Adam learning rate based on the formula, iteration number, decay rate and beta values. OK...
 
-Well, looking for this futile information, I have also been digging into any possible forum and Keras documentation, the Keras object model, layer and optimizer variables.
-I could only get the INITIAL learning rate, before 
-Maybe I'll find it once I won't care about it anymore.
-Definitively useful.
+Well, looking for this futile information, I have been digging into any possible Keras documentation, stackoverflow and online forums, the Keras object model, layer and optimizer variables.
+I could only get the INITIAL learning rate, before dynamic changes.
+That was definitively useful.
 
-### Some findings:
-**Reduce LR on plateau**:
+### Interesting findings:
+
+#### Model structure
+A simple way to dig into the model object:
+
+    vars(model)
+    vars(model.optimizer)
+    vars(model.layers)
+
+This simple approach enables to understand the internal structure of the Keras object model and look where specific data is located.
+The initial learning rate is for instance located **here**:
+
+    model.optimizer.lr
+
+#### Saving models as files every time the validation accuracy has increased
+This one is my holy grail. Really useful.
+How to train models days and nights on my petty CPU and it automatically saves the best models without fearing power outages or bad manipulations/keystrokes.
+
+    filepath = model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max')
+    callback_list.append(checkpoint)
+    
+    history = model.fit_generator(training_set,
+                         steps_per_epoch=train_size,
+                         epochs=initial_epoch + new_epochs,
+                         validation_data=test_set,
+                         validation_steps=test_size,
+                         initial_epoch=initial_epoch,
+                         callbacks=callback_list)
+
+Note that the size of files depends on the number of trainable parameters.
+Paradoxally, the more convolution blocks, the smaller the number of parameters, and the smaller the files. Yes!
+
+#### Reduce LR on plateau
+This one is also very useful.
+It triggers a 80% reduction of the learning rate once a plateau has been reached, after a default "patience" of 5 epochs.
+According to the Keras documentation and a few blogs, most models benefit from it. The obvious reason is that at some point, the model dances around a local minimum and always arrives beyond, as it jumps to far, due to a too high learning rate.
+Reducing 80% this learning rate ensure smaller steps and enables getting closer to it.
 
     callback_list = []
     
@@ -196,19 +232,5 @@ Definitively useful.
                          initial_epoch=initial_epoch,
                          callbacks=callback_list)
 
-This triggers a 80% reduction of the learning rate once a plateau has been reached, after a default "patience" of 5 epochs.
-According to the documentation and a few blogs, most models benefit from it. The obvious reason is that at some point, the model is at "learning rate" distance from a mimimum. Hence, it keeps jumping too far to the other side of that target.
-Then making smaller steps enables getting closer to it.
-
-A simple way to dig into the model object:
-
-    vars(model)
-    vars(model.optimizer)
-    vars(model.layers)
-
-This simple approach enables to understand the internal structure of the Keras object model and look where specific data is located.
-The initial learning rate is for instance located **here**:
-
-    model.optimizer.lr
-
 So damn simple...
+
