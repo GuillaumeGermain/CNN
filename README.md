@@ -28,11 +28,11 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 10000 pictures is actually not a lot for computer vision. For that reason, the existing data is multiplicated by a range of smart techniques:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
-- changing the colors
+- adjusting the colors
 
 The data augmentation generator produces variations out of each original picture.
 This leads to a wider range of pictures and reduces overfitting.
-The test dataset is also augmented with the same technique.
+The test dataset is also augmented using the same technique.
 
 In practice, with a standard batch_size of 32, the data generator produces new variations out of each original picture, 32 at once.
 Increasing this batch_size normally leads to a faster performance up to a certain limit.
@@ -43,7 +43,7 @@ For that reason, I saved the network parameters weights to conveniently load the
 That happened to be convenient to transfer weights into new versions of the network.
 
 ## Building the model
-Here I build 2 simple models
+Here are 2 simple models
 
     classifier_1 = Sequential()
     classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
@@ -115,7 +115,7 @@ The number of parameters between this feature vector and the first fully connect
 
 So overall, when building a CNN, adding more convolutions blocks actually means less trainable parameters.
 
-## Model fitting
+## Model fitting and transfer
 Starting with the smaller network, I trained it and obtained a 79% accuracy rate after a few epochs.
 Fair enough without a GPU, only a few epochs and not so much data.
 
@@ -131,7 +131,7 @@ Loading these weights again:
     classifier_2.load_weights("classifier2_tmp.h5")
 
 ### Limits of weight transfer
-We can transfer the whole set of weights from the file only if the encoded model and the new model have the same structure and dimensions.
+We can transfer the whole set of weights from the file only if the encoded model and the new model have exactly the same structure and dimensions.
 If not, we can still transfer weight layer by layer.
 
 First, a model with exactly the same structure has to be created and weights are loaded into it.
