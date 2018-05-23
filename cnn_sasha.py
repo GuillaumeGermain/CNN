@@ -26,9 +26,6 @@ model_2.summary()
 # train the model for a few epochs and check if it is improving
 CONFIG = "Guillaume" # "Guillaume" or "Alexander"
 
-USE_CHECKPOINTS = True
-SHOW_LEARN_PARAM = False
-
 if CONFIG == "Guillaume":
     # config Guillaume CPU
     EPOCH_0 = 39
@@ -36,8 +33,6 @@ if CONFIG == "Guillaume":
     TRAIN_SIZE = 150
     TEST_SIZE = 200
     BATCH_SIZE = 16
-    USE_CHECKPOINTS = True
-    SHOW_LEARN_PARAM = True
 elif CONFIG == "Speed":
     # max speed iterations
     EPOCH_0 = 0
@@ -45,7 +40,6 @@ elif CONFIG == "Speed":
     TRAIN_SIZE = 10
     TEST_SIZE = 10
     BATCH_SIZE = 16
-    USE_CHECKPOINTS = False
 elif CONFIG == "Patrick":
     # config Patrick CPU
     EPOCH_0 = 0
@@ -53,7 +47,6 @@ elif CONFIG == "Patrick":
     TRAIN_SIZE = 150
     TEST_SIZE = 2000
     BATCH_SIZE = 16
-    USE_CHECKPOINTS = False
 #classifier.fit_generator(training_set, steps_per_epoch = 150, epochs = 25, validation_data = test_set, validation_steps = 62)    
 elif CONFIG == "Alexander":
     # config Sasha GPU
@@ -65,10 +58,9 @@ elif CONFIG == "Alexander":
 
 
 
-history = train_model(model, new_epochs=NEW_EPOCHS, batch_size=BATCH_SIZE, verbose=1,
-                 initial_epoch=EPOCH_0,
-                 use_checkpoints=USE_CHECKPOINTS, show_learn_param=SHOW_LEARN_PARAM,
-                 train_size=TRAIN_SIZE, test_size=TEST_SIZE)
+history = train_model(model, new_epochs=NEW_EPOCHS, initial_epoch=EPOCH_0,
+                      batch_size=BATCH_SIZE,
+                      train_size=TRAIN_SIZE, test_size=TEST_SIZE)
 
 
 #Save model once training is done

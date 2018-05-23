@@ -1,0 +1,65 @@
+history = train_classifier(model, new_epochs=NEW_EPOCHS, batch_size=BATCH_SIZE, verbose=1,
+                 initial_epoch=EPOCH_0,
+                 use_checkpoints=USE_CHECKPOINTS, train_size=TRAIN_SIZE, test_size=TEST_SIZE)
+Found 8000 images belonging to 2 classes.
+Found 2000 images belonging to 2 classes.
+Epoch 11/25
+150/150 [==============================] - 123s 820ms/step - loss: 0.0098 - acc: 0.9983 - val_loss: 2.5968 - val_acc: 0.7610
+
+Epoch 00011: val_acc improved from -inf to 0.76100, saving model to weights-improvement-11-0.76.h5
+Epoch 12/25
+150/150 [==============================] - 107s 715ms/step - loss: 0.0058 - acc: 0.9983 - val_loss: 2.8204 - val_acc: 0.7565
+
+Epoch 00012: val_acc did not improve
+Epoch 13/25
+150/150 [==============================] - 105s 702ms/step - loss: 0.0067 - acc: 0.9979 - val_loss: 2.6247 - val_acc: 0.7595
+
+Epoch 00013: val_acc did not improve
+Epoch 14/25
+150/150 [==============================] - 102s 682ms/step - loss: 0.0197 - acc: 0.9967 - val_loss: 2.6977 - val_acc: 0.7580
+
+Epoch 00014: val_acc did not improve
+Epoch 15/25
+150/150 [==============================] - 98s 656ms/step - loss: 0.0161 - acc: 0.9967 - val_loss: 2.6426 - val_acc: 0.7595
+
+Epoch 00015: val_acc did not improve
+Epoch 16/25
+150/150 [==============================] - 98s 656ms/step - loss: 0.0139 - acc: 0.9958 - val_loss: 2.5518 - val_acc: 0.7520
+
+Epoch 00016: val_acc did not improve
+Epoch 17/25
+150/150 [==============================] - 98s 654ms/step - loss: 0.0198 - acc: 0.9946 - val_loss: 2.5995 - val_acc: 0.7650
+
+Epoch 00017: val_acc improved from 0.76100 to 0.76500, saving model to weights-improvement-17-0.77.h5
+Epoch 18/25
+150/150 [==============================] - 103s 685ms/step - loss: 0.0096 - acc: 0.9967 - val_loss: 2.6482 - val_acc: 0.7600
+
+Epoch 00018: val_acc did not improve
+Epoch 19/25
+150/150 [==============================] - 105s 700ms/step - loss: 0.0222 - acc: 0.9946 - val_loss: 2.5792 - val_acc: 0.7705
+
+Epoch 00019: val_acc improved from 0.76500 to 0.77050, saving model to weights-improvement-19-0.77.h5
+Epoch 20/25
+150/150 [==============================] - 102s 677ms/step - loss: 0.0095 - acc: 0.9967 - val_loss: 2.7206 - val_acc: 0.7545
+
+Epoch 00020: val_acc did not improve
+Epoch 21/25
+150/150 [==============================] - 102s 682ms/step - loss: 0.0032 - acc: 0.9992 - val_loss: 2.7841 - val_acc: 0.7515
+
+Epoch 00021: val_acc did not improve
+Epoch 22/25
+150/150 [==============================] - 105s 698ms/step - loss: 0.0270 - acc: 0.9950 - val_loss: 2.7686 - val_acc: 0.7565
+
+Epoch 00022: val_acc did not improve
+Epoch 23/25
+150/150 [==============================] - 103s 685ms/step - loss: 0.0163 - acc: 0.9958 - val_loss: 2.6007 - val_acc: 0.7680
+
+Epoch 00023: val_acc did not improve
+Epoch 24/25
+150/150 [==============================] - 97s 648ms/step - loss: 0.0187 - acc: 0.9954 - val_loss: 2.7021 - val_acc: 0.7600
+
+Epoch 00024: val_acc did not improve
+Epoch 25/25
+150/150 [==============================] - 97s 647ms/step - loss: 0.0103 - acc: 0.9971 - val_loss: 2.6484 - val_acc: 0.7675
+
+Epoch 00025: val_acc did not improve

@@ -48,8 +48,8 @@ def build_model(num_conv_layers=1, with_dropout=True):
     
     model.add(Flatten())
     model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
-    model.add(Dense(1, activation='sigmoid'))
     model.add(Dropout(rate=0.2))
+    model.add(Dense(1, activation='sigmoid', kernel_regularizer=l2(0.01)))
     return model
 
 # New Callback descendant to print the learning rate after each epoch
@@ -91,8 +91,7 @@ def show_optimizer_settings(model):
 # Compile and train the CNN
 def train_model(model, new_epochs, initial_epoch=0,
                 train_size=None, test_size=None,
-                use_checkpoints=False, show_learn_param=False,
-                batch_size=32, verbose=1
+                batch_size=16, verbose=1
                 ):
 
     # Set Data Generators for training and test sets    
@@ -133,29 +132,15 @@ def train_model(model, new_epochs, initial_epoch=0,
     metric_list = ['accuracy']
     
     # Add checkpoints to save weights in case the test set acc improved
-    if use_checkpoints:    
-        filepath = model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max')
-        callback_list.append(checkpoint)
+    filepath = "models/" + model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max', verbose=0)
+    callback_list.append(checkpoint)
 
-    # Reduce LR on plateau
+    # Reduce LR on plateau by default
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
                           patience=5, min_lr=1.e-5)
     callback_list.append(reduce_lr)
         
-    if show_learn_param:
-        learn_param = Callback_show_learn_param()
-        callback_list.append(learn_param)
-        
-        # Add metric if needed
-        def get_lr_metric(optimizer):
-            def lr(y_true, y_pred):
-                return optimizer.lr #K.eval(optimizer.lr)
-            return lr
-
-        lr_metric = get_lr_metric(optimizer)
-        metric_list.append(lr_metric)
-    
     model.compile('adam', loss='binary_crossentropy', metrics=metric_list)
 
     history = model.fit_generator(training_set,
