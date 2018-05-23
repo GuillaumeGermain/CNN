@@ -41,6 +41,7 @@ def print_model_layers(model):
 def build_model(num_conv_layers=1, with_dropout=True):
 
     model = Sequential()
+    model.name = "sequential_" + str(num_conv_layers)
     
     for i in range(num_conv_layers):
         model.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
@@ -132,7 +133,7 @@ def train_model(model, new_epochs, initial_epoch=0,
     metric_list = ['accuracy']
     
     # Add checkpoints to save weights in case the test set acc improved
-    filepath = "models/" + model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
+    filepath = "models/" + model.name + "-weights-improvement-{epoch:02d}-{val_acc:.3f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max', verbose=0)
     callback_list.append(checkpoint)
 
