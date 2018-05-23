@@ -8,30 +8,37 @@ Created on Thu May 17 19:42:19 2018
 
 import h5py
 
+from keras.models import Sequential
+from keras.layers import Convolution2D, MaxPooling2D, Flatten, Dense, Dropout
+
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ModelCheckpoint, Callback
+from keras.callbacks import ModelCheckpoint, Callback, ReduceLROnPlateau
 from keras.optimizers import Adam
 
 import keras.backend as K
-
+from keras.regularizers import l2
 
 def print_file_layers(filename):
     """
     show layers stored in a h5 file
-    
     filename: h5 file to open
     """
-    #Print layers in the file
-
+    print(filename)
     with h5py.File(filename) as f:
         #print(list(f))
         for i in list(f):
             print(i)
 
-def build_model(num_conv_layers=1):
-    from keras.models import Sequential
-    from keras.layers import Convolution2D, MaxPooling2D
-    from keras.layers import Flatten, Dense
+def print_model_layers(model):
+    # classifier 1 layers
+
+    print(model.model.name + " layers")
+    for layer in model.layers:
+        print(layer.name.ljust(20), type(layer))
+
+
+
+def build_model(num_conv_layers=1, with_dropout=True):
 
     model = Sequential()
     
@@ -40,9 +47,9 @@ def build_model(num_conv_layers=1):
         model.add(MaxPooling2D(pool_size=(2,2)))
     
     model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
-    
+    model.add(Dropout(rate=0.2))
     return model
 
 # New Callback descendant to print the learning rate after each epoch
@@ -53,18 +60,18 @@ class Callback_show_learn_param(Callback):
         decay = self.model.optimizer.decay
         iterations = self.model.optimizer.iterations
         lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
-        print("lr", K.eval(lr), "decay", K.eval(decay), "lr_with_decay", K.eval(lr_with_decay))
+        
+        # Beta values
+        beta_1=self.model.optimizer.beta_1
+        beta_2=self.model.optimizer.beta_2
+        print("lr", K.eval(lr), "decay", K.eval(decay), "lr_with_decay", K.eval(lr_with_decay),
+              "beta_1", K.eval(beta_1), "beta_2", K.eval(beta_2))
         
 #        # other parameters
 #        clipnorm = self.model.optimizer.clipnorm
 #        clipvalue = self.model.optimizer.clipvalue
 #        print("clipnorm", K.eval(clipnorm), "clipvalue", K.eval(clipvalue))
         
-        # Beta values
-        beta_1=self.model.optimizer.beta_1
-        beta_2=self.model.optimizer.beta_2
-        print("beta_1", K.eval(beta_1), "beta_2", K.eval(beta_2))
-
 def show_optimizer_settings(model):
     lr = model.optimizer.lr
     decay = model.optimizer.decay
@@ -103,7 +110,7 @@ def train_model(model, new_epochs, initial_epoch=0,
     
     test_set = test_datagen.flow_from_directory('dataset/test_set',
                                                 target_size=(64, 64),
-                                                batch_size=batch_size,
+                                                batch_size=1, #max(batch_size // 4, 1),
                                                 class_mode='binary')
     
     #TODO check the train and test folder to provide default values if needed
@@ -118,20 +125,27 @@ def train_model(model, new_epochs, initial_epoch=0,
         print("Optimizer: found in model")
     except:
         optimizer = Adam(lr=0.001)
-        print("Optimizer: Using Adam(lr=0.001)")
+        print("Optimizer not found in model: Using Adam(lr=0.001)")
 
         
     # Manage callbacks for debugging
-    callbacks_list = []
+    callback_list = []
+    metric_list = ['accuracy']
+    
     # Add checkpoints to save weights in case the test set acc improved
     if use_checkpoints:    
-        filepath="weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        callbacks_list.append(checkpoint)
+        filepath = model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max')
+        callback_list.append(checkpoint)
+
+    # Reduce LR on plateau
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                          patience=5, min_lr=1.e-5)
+    callback_list.append(reduce_lr)
         
     if show_learn_param:
         learn_param = Callback_show_learn_param()
-        callbacks_list.append(learn_param)
+        callback_list.append(learn_param)
         
         # Add metric if needed
         def get_lr_metric(optimizer):
@@ -140,8 +154,9 @@ def train_model(model, new_epochs, initial_epoch=0,
             return lr
 
         lr_metric = get_lr_metric(optimizer)
+        metric_list.append(lr_metric)
     
-    model.compile('adam', loss='binary_crossentropy', metrics=['accuracy', lr_metric])
+    model.compile('adam', loss='binary_crossentropy', metrics=metric_list)
 
     history = model.fit_generator(training_set,
                          steps_per_epoch=train_size,
@@ -150,7 +165,7 @@ def train_model(model, new_epochs, initial_epoch=0,
                          validation_steps=test_size,
                          initial_epoch=initial_epoch,
                          verbose=verbose,
-                         callbacks=callbacks_list)
+                         callbacks=callback_list)
     model.save_weights("classifier2_1.h5")
     return history
 

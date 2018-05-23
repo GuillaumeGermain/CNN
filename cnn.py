@@ -9,7 +9,7 @@ from keras.layers import MaxPooling2D
 from keras.layers import Flatten
 from keras.layers import Dense
 
-from cnn_util import print_file_layers, train_model
+from cnn_util import print_file_layers, train_model, print_model_layers
 
 
 # First simpler CNN version
@@ -20,17 +20,10 @@ classifier_1.add(Flatten())
 classifier_1.add(Dense(128, activation='relu'))
 classifier_1.add(Dense(1, activation='sigmoid'))
 
-classifier_1.layers
+# classifier 1 layers
+print_model_layers(classifier_1)
 
-classifier_1 = Sequential()
-classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
-classifier_1.add(MaxPooling2D(pool_size=(2,2)))
-classifier_1.add(Flatten())
-classifier_1.add(Dense(128, activation='relu'))
-classifier_1.add(Dense(1, activation='sigmoid'))
-
-
-
+classifier_1.model.name
 
 # Build a new deeper classifer
 classifier_2 = Sequential()
@@ -49,58 +42,37 @@ classifier_2.summary()
 
 
 """
-Transfer learning:
-    copy the trained weights from one NN to another
-    Here, only the first layer can be transferred as the structures are different
-    This is enough to already increase the performance
+Saved weights
+
+    classifier_1
+    classifier.h5          intermediate weights
+    classifier_final.h5    latest weights after longer training
     
-    Flatten and Max Pool has no trainable parameters then cannot be transferred
-    
-    we cannot fully transfer as the shapes sizes differ
-    So the weight transfer will be only on the first layer
-    classifier_1 has 4M trainable parameters, classifier_1 only 1M although it is deeper
-    Conv2D and MaxPool decrease a lot the features volume so it compresses this amount
-    
-    Most of the parameters is the flattened vector size x number of nodes (128) of the first layer.
-    classifier_1 feature vector dim is 32768 and classifier_2 8192 -> 4 times less parameters
-    
-    It's not possible to transfer directly weights from a h5 file to a NN with a different structure
-    Then the weights are loaded back on a classifier with exactly the same structure as the saved NN weights
-    and the weights are transferred layer by layer from a NN to another
-    
-    classifier_final.h5 contains the weights of the first classifier after a few epochs
+    classifier_2
+    classifier2_1.h5       intermediate weights
+    classifier2_final.h5   latest weights after training. this one has inherited from the trained weights
+    classifier3.h5
 """
-
-
-# Saved weights
-"""
-classifier_1
-classifier.h5          intermediate weights
-classifier_final.h5    latest weights after longer trainings
-
-classifier_2
-classifier2_final.h5   latest weights after training. this one has inherited from the trained weights
-classifier2_1.h5       
-classifier3.h5
-"""
-filename = "classifier2_final.h5"
-print_file_layers(filename)
-
-
 
 
 # Reload saved weights back into classfier_1
 filename = "classifier_final.h5"
 classifier_1.load_weights(filename)
 
+# Saved weights of classifier_2
+filename = "classifier2_final.h5"
+print_file_layers(filename)
+classifier_2.load_weights(filename)
+
+
+vars(classifier_1)
+
+
+
 # Further train classifier 1
-#...
-
-
-# Save classifier_1 weights
-classifier_1.load_weights(filename)
-classifier_1.compile('adam', loss='binary_crossentropy', metrics=['accuracy'])
-
+#TODO find the number of iterations of training if this stored somewhere
+#classifier_1.compile('adam', loss='binary_crossentropy', metrics=['accuracy'])
+history = train_model(classifier_1, new_epochs=10)
 
 # Save classifier_1 weights + structure
 classifier_1.save("classifier_final_all.h5")

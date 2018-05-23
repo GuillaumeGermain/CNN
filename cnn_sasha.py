@@ -4,7 +4,7 @@ Created on Mon May 21 20:55:27 2018
 New script for Sasha
 """
 
-from cnn_util import train_model #build_model #, print_file_layers
+from cnn_util import train_model, build_model #, print_file_layers
 
 
 #filename = "classifier_1_epoch_45.h5"
@@ -19,23 +19,27 @@ model = load_model(filename)
 # check model structure
 model.summary()
 
+model_2 = build_model(num_conv_layers=2)
+model_2.summary()
+
 
 # train the model for a few epochs and check if it is improving
-CONFIG = "Speed" # "Guillaume" or "Alexander"
+CONFIG = "Guillaume" # "Guillaume" or "Alexander"
 
 USE_CHECKPOINTS = True
 SHOW_LEARN_PARAM = False
 
 if CONFIG == "Guillaume":
     # config Guillaume CPU
-    EPOCH_0 = 0
-    NEW_EPOCHS = 15
+    EPOCH_0 = 39
+    NEW_EPOCHS = 20
     TRAIN_SIZE = 150
     TEST_SIZE = 200
     BATCH_SIZE = 16
-    USE_CHECKPOINTS = False
+    USE_CHECKPOINTS = True
+    SHOW_LEARN_PARAM = True
 elif CONFIG == "Speed":
-    # config Guillaume CPU
+    # max speed iterations
     EPOCH_0 = 0
     NEW_EPOCHS = 15
     TRAIN_SIZE = 10
