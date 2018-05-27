@@ -1,8 +1,9 @@
-# CNN Transfer Learning
-
+# CNN Learning Transfer
 
 The principle is easy: optimize and accelerate the learning of a model by training specific layers,
 transfer them to a deeper model and iterate.
+It is also useful when a model is not deep enough to get a satisfying performance.
+You can then build a deeper one, and transfer parameters of the first common layers to partially benefit from the training of the first model.
 
 This is relevant when the compute capacity gets insufficient compared to the needs.
 Cloud GPUS are good but at some point beyond the budget...
@@ -12,8 +13,8 @@ This is also a good opportunity to better understand the building and training o
 - [X] cleanup the readme
 - [X] display nice pics of cats/dogs in the readme
 - [X] train these models over a decent number of epochs
-- [ ] reduce variance with relevant regularisation
-- [ ] push a model with 2-3 conv blocks over 90% val accuracy
+- [X] reduce variance with relevant regularisation
+- [ ] push a model with 3+ conv blocks over 90% val accuracy
 - [ ] add a predict function for one picture after the training
 - [ ] display last used learning rate
 
@@ -28,26 +29,51 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 <img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120">
 
 ## Data augmentation
-10000 pictures is actually not a lot for computer vision. For that reason, the existing data is multiplicated by a range of smart techniques:
+10000 pictures is actually not a lot for a computer vision task. That's why we multiplicate the existing data with a range of simple techniques:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
 - adjusting the colors
 
-The data augmentation generator produces variations out of each original picture.
-This leads to a wider range of pictures and reduces overfitting.
+    # Set Data Generators for training and test sets    
+    train_datagen = ImageDataGenerator(rescale=1./255,
+                                       shear_range=0.2,
+                                       zoom_range=0.2,
+                                       horizontal_flip=True)
+    
+    test_datagen = ImageDataGenerator(rescale=1./255)
+    
+    training_set = train_datagen.flow_from_directory('dataset/training_set',
+                                                     target_size=(64, 64),
+                                                     batch_size=batch_size,
+                                                     class_mode='binary')
+    test_set = test_datagen.flow_from_directory('dataset/test_set',
+                                                target_size=(64, 64),
+                                                batch_size=batch_size
+                                                class_mode='binary')
+    history = model.fit_generator(training_set,
+                         steps_per_epoch=train_size,
+                         epochs=initial_epoch + new_epochs,
+                         validation_data=test_set,
+                         validation_steps=test_size,
+                         initial_epoch=initial_epoch,
+                         verbose=verbose,
+                         callbacks=callback_list)
+
+This data augmentation generator produces small variations out of each original picture, and it's even done on the fly, for a best efficiency.
+This leads to a much wider range of pictures and helps reducing overfitting.
 The test dataset is also augmented using the same technique.
 
-In practice, with a standard batch_size of 32, the data generator produces new variations out of each original picture, 32 at once.
-Increasing this batch_size normally leads to a faster performance up to a certain limit.
-On my CPU and RAM, it was faster with a batch_size of 16 than 32.
-Overall, it took 25 minutes per epoch (1 pass through the data).
+In practice, with a typical batch_size of 32, the data generator produces new variations out of each original picture.
+That means, from our original set of 8000 pictures for the training set, we actually get 256000, which is clearly better for a proper training.
+In my case, I use a batch_size of 16, and it still takes around 25 minutes per epoch (1 pass through the data).
 For that reason, I saved the network parameters weights to conveniently load them again and continue the training later.
 
 That happened to be convenient to transfer weights into new versions of the network.
 
 ## Building the model
-Here are 2 simple models
+Let's start by 2 simple models
 
+    # Model 1
     classifier_1 = Sequential()
     classifier_1.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
     classifier_1.add(MaxPooling2D(pool_size=(2,2)))
@@ -55,6 +81,7 @@ Here are 2 simple models
     classifier_1.add(Dense(128, activation='relu'))
     classifier_1.add(Dense(1, activation='sigmoid'))
 
+    # Model 2
     classifier_2 = Sequential()
     classifier_2.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
     classifier_2.add(MaxPooling2D(pool_size=(2,2)))
@@ -64,12 +91,22 @@ Here are 2 simple models
     classifier_2.add(Dense(128, activation='relu'))
     classifier_2.add(Dense(1, activation='sigmoid'))
 
+Storing the trained weights of a classifier model into a file is useful to reload it later:
+
+    filename = "classifier1.h5"
+    classifier_1.save_weights(filename)
+    
+ReLoad these weights later back into the model:
+
+    from keras.models import load_model
+    classifier_1 = load_model(filename)
+
 ## Remark about the neural network and trainable parameters    
-Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures means a lot of processing. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network, say 1000 nodes, and you have 12M parameters.
+Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures requires a lot of compute. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
 
-That's where convolution networks come handy. They contain in comparison very few parameters and, coupled with a typical max pooling, encode important features from the picture while significantly reducing the size of the resulting feature vector.
+That's where convolution networks come handy. They contain in comparison very few parameters and, coupled with a typical max pooling, they encode important features from the picture while significantly reducing the size of the resulting feature vector.
 
-We can see this in these 2 summaries:
+Having a look again on the network structures:
 
     classifier_1.summary()
 
@@ -106,17 +143,17 @@ The second network has one more convolution block (conv2d + max pooling)
     _________________________________________________________________
 
 
-The first network, which is quite small, has already 4 millions parameters.
-The second one, although deeper, has 1 million, 4 times less!
+The first network, though quite shallow, has already 4 millions parameters.
+The second deeper one has 1 million, 4 times less!
 Intuitively we would have expected more parameters on a deeper network, wouldn't we?
-In practice, each convolution block compresses the data dimension.
-The resulting feature dimension is 32768 in the first network, and 8192 in the second => 4 times less parameters.
 
-Most of the parameters are actually between this resulting feature vector and the begining of the standard neural network (dense_n in the table).
-The flattening itself transforms the resulting matrix into a flat vector, keeping the same dimention.
-The number of parameters between this feature vector and the first fully connected layer is vector dimension x number of nodes (128) + number of biases (128 again).
+Let's get why: both models have a convolution part, followed by a flattening to get a feature vector which is plugged into a standard neural network.
+Most parameters are actually between this resulting feature vector and the begining of the standard neural network (dense_3 and dense_4 in tis table).
+The number of parameters between the feature vector and the first NN layer is vector dim (32768 or 8192) x number of nodes (128) + number of biases (128 again).
 
-So overall, when building a CNN, adding more convolutions blocks actually means less trainable parameters.
+Each convolution block actually compresses the dimension of this feature vector, by a factor 4.
+
+So overall, while building a CNN, adding more convolutions blocks actually means less trainable parameters.
 
 ## Model fitting and transfer
 Starting with the smaller network, I trained it and obtained a 79% accuracy rate after a few epochs.
@@ -125,29 +162,23 @@ Fair enough without a GPU, only a few epochs and not so much data.
 Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible into the new one.
 A full copy from a model to another identical model is actually quite easy.
 
-Storing the trained weights of a classifier model into a file is useful to reload it later:
-
-    classifier_2.save_weights("classifier2_tmp.h5")
-    
-Loading these weights again:
-
-    classifier_2.load_weights("classifier2_tmp.h5")
-
 ### Limits of weight transfer
-We can transfer the whole set of weights from the file only if the encoded model and the new model have exactly the same structure and dimensions.
-If not, we can still transfer weight layer by layer.
+I quickly noticed that we cannnot transfer weights between models with different structures.
+The transfer actually works layer by layer, and only if the layer type and dimensions correspond.
+You cannot transfer a Dense layer to a Maxconvolution layer for instance.
+Some layers also happen not to have parameters, like MaxPool and Flatten.
 
-First, a model with exactly the same structure has to be created and weights are loaded into it.
-Either like this:
-Or more conveniently by saving and loading the whole model into and from the h5 file.
+So basically, you start with the first layer, transfer parameters, and continue layer by layer until you meet a different type of layer.
 
-    classifier.save("classifier_model_tmp.h5")
-    classifier_new.load("classifier_model_tmp.h5")
+    model_new.layers[0].set_weights(classifier_1.layers[0].get_weights())
+
+In the current example, only the first layer can be transferred.
+The 2nd is a Max Pool where there is nothing to transfer.
+The 3rd layers are already different (Conv2D vs flatten)
+
+Then in prctice, I transferred parameters layers by layer, and only the first ones.
 
 Then weights can then be transferred layer per layer, as long as they have the same type and dimension.
-
-    classifier_2.layers[0].set_weights(classifier_1.layers[0].get_weights())
-
 In this case, only the first layer could be transferred, due to some limits.
 - Max Pooling has no trainable parameters, so nothing to transfer
 - Flattening just flattens a rank 2 matrix into a flat vector, of course no trainable parameters.
