@@ -9,14 +9,26 @@ Created on Thu May 17 19:42:19 2018
 import h5py
 
 from keras.models import Sequential
-from keras.layers import Convolution2D, MaxPooling2D, Flatten, Dense, Dropout
+from keras.layers import Convolution2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ModelCheckpoint, Callback, ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint, Callback#, ReduceLROnPlateau
 from keras.optimizers import Adam
 
 import keras.backend as K
 from keras.regularizers import l2
+
+
+# Are GPUZ available?
+from tensorflow.python.client import device_lib
+def get_available_gpus():
+    """
+        Usage: gpus = get_available_gpus()
+    """
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
+
+
 
 def print_file_layers(filename):
     """
@@ -38,23 +50,78 @@ def print_model_layers(model):
 
 
 
-def build_model(num_conv_layers=1, with_dropout=True):
-
+def build_model(num_conv_layers=1, name=None):
     model = Sequential()
-    model.name = "sequential_" + str(num_conv_layers)
+    if name is not None:
+        model.name = name
+    else:
+        model.name = "sequential_" + str(num_conv_layers)
     
     for i in range(num_conv_layers):
         model.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+        model.add(BatchNormalization())
         model.add(MaxPooling2D(pool_size=(2,2)))
-    
     model.add(Flatten())
     model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
     model.add(Dropout(rate=0.2))
     model.add(Dense(1, activation='sigmoid', kernel_regularizer=l2(0.01)))
     return model
 
-# New Callback descendant to print the learning rate after each epoch
+
+def build_model_2(num_conv_layers=1, name=None):
+    model = Sequential()
+    if name is not None:
+        model.name = name
+    else:
+        model.name = "sequential_" + str(num_conv_layers)
     
+    for i in range(num_conv_layers):
+        model.add(Convolution2D(32, kernel_size=(3,3), padding='same', input_shape=(64,64,3), activation='relu'))
+        model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Flatten())
+    model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dropout(rate=0.2))
+    model.add(Dense(64, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dropout(rate=0.2))
+    model.add(Dense(1, activation='sigmoid', kernel_regularizer=l2(0.01)))
+    return model
+
+
+
+### Efficient model to try
+def build_model_eff():
+    model = Sequential()
+    model.name = "sequential_eff"
+    
+    model.add(Convolution2D(32, kernel_size=(5,5), padding='valid', input_shape=(64,64,3), activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Convolution2D(32, kernel_size=(5,5), padding='same', activation='relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(rate=0.2))
+    
+    model.add(Convolution2D(64, kernel_size=(3,3), padding='same', activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Convolution2D(64, kernel_size=(3,3), padding='same', activation='relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(rate=0.2))
+    
+    model.add(Flatten())
+    
+    model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dense(64, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dense(32, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dense(1, activation='relu', kernel_regularizer=l2(0.01)))
+    
+    return model
+
+
+
+
+
+# New Callback descendant to print the learning rate after each epoch
 class Callback_show_learn_param(Callback):
     def on_epoch_end(self, epoch, logs=None):
         lr = self.model.optimizer.lr
@@ -137,10 +204,10 @@ def train_model(model, new_epochs, initial_epoch=0,
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max', verbose=0)
     callback_list.append(checkpoint)
 
-    # Reduce LR on plateau by default
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                          patience=5, min_lr=1.e-5)
-    callback_list.append(reduce_lr)
+#    # Reduce LR on plateau by default
+#    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+#                          patience=5, min_lr=1.e-5)
+#    callback_list.append(reduce_lr)
         
     model.compile('adam', loss='binary_crossentropy', metrics=metric_list)
 
