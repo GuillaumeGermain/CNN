@@ -13,18 +13,21 @@ You adjust the last layer and ajust the output properly to fit your business cas
 **The objective of this project is different.**
 The idea is to use learning transfer to accelerate the learning of an hand-made model.
 
-So you build a model, train it, and the model accuracy reaches a plateau. You train over many epochs, again and again, the training accuracy dance around 80% and the validation accuracy around 70%. The model structure is clealy not good enough and you want to make the model deeper. If you make it right, it will stabilize at a higher level than the current model.
+## Typical NN Model building
 
-So you add a few layers, add a dropout or two just in case, start the training again, and the accuracy starts from 55% and increases progressively, sometime during a few epochs.
+So you build a model, train it, and the model accuracy reaches a plateau. You train over many epochs, again and again, the training accuracy dance around 90% and the validation accuracy around 80%. The model structure is clearly not good enough and you want to make the model deeper. If you make it right, it will stabilize at a higher level than the current model, right.
+
+So you add a few layers, add a dropout or two just in case, start the training again, and the accuracy starts from 55% and increases progressively, sometimes during a few epochs.
 
 All this takes time. You can go much faster by transferring parameters of the first common layers to boost the new model with the training of the previous model. It works if you can copy these parameters layer by layer.
 As a result, the new model gets from the start a good accuracy and reaches a new plateau much faster (hopefully higher...), as it does not have to re-learn the basic convolution filters from scratch.
 
 This saves many training epochs, and translates into time and money.
-This is particularly relevant when the compute capacity gets insufficient compared to your needs, and this will happen sooner that you think.
+This is particularly relevant when the compute capacity gets insufficient compared to your needs, and this will happen sooner than you think.
 
 ## Example
-To illustrate this approach, let's take a usual case: a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
+To illustrate this approach, let's take an usual case: a dog and cat classifier.
+You start with 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
 Pictures from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
 
@@ -64,8 +67,8 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
                          verbose=verbose,
                          callbacks=callback_list)
 
-This generator produces small variations out of each original picture, and it's even done on the fly, for a best efficiency.
-This leads to a much wider range of pictures and helps reducing overfitting.
+This generator produces small variations out of each original picture, and it's even done on the fly for a better efficiency.
+This leads to a much wider range of pictures and reduces overfitting.
 The test dataset is also augmented using the same technique.
 
 In practice, with a typical batch_size of 32, the data generator produces 32 new variations out of each original picture.
@@ -160,7 +163,7 @@ Each convolution block actually compresses the dimension of this feature vector,
 
 So overall, while building a CNN, adding more convolutions blocks actually means less trainable parameters.
 
-## Model fitting and transfer
+## Model fitting and weights transfer
 Starting with the smaller network, I trained it and obtained a 79% validation accuracy rate after a few epochs.
 Fair enough without a GPU, only a few epochs and not so much data.
 
@@ -168,12 +171,14 @@ Then I added a new Convolution2D + MaxPool block and transferred as many weights
 A full copy from a model to another identical model is actually quite easy.
 
 ### Limits of weight transfer
-I quickly noticed that we cannnot transfer weights between models with different structures.
+We cannnot transfer weights between models with different structures.
 The transfer actually works layer by layer, and only if the layer type and dimensions correspond.
 You cannot transfer a Dense layer to a Maxconvolution layer for instance.
-Some layers also happen not to have parameters, like MaxPool and Flatten.
 
-So basically, you start with the first layer, transfer parameters, and continue layer by layer until you meet a different type of layer.
+- Some layers like MaxPool and Flatten don't have trainable parameters, so we can simply ignore them.
+- Basically, if you change anything at the beginning of the model, you lose the capacity to transfer anything after this layer. This is a serious limitation.
+
+So you start with the first layer, transfer parameters, and continue layer by layer until you meet a different type of layer.
 
     model_new.layers[0].set_weights(classifier_1.layers[0].get_weights())
 
@@ -198,15 +203,15 @@ Once with weight transfer, once without.
 - without transfer, the model reached quickly 79% validation accuracy and stagnated there
 
 ## Conclusion
-It's quite interesting to see that training a very small network and just transferring its first convolution weights immediately increases the performance of 3% of the second network. And this advantage lasts over at least a few training epochs.
-I believe that this small advantage also transfers on bigger models and can save quite some computing time.
-Pushing this a bit more, training longer the first model before transferring the weights could result in a better accuracy.
+Just transferring the weights of only one convolution layer immediately increased the performance at the start.
+This advantage did last over a few training epochs.
+The validation accuracy ended up 3% higher, compared to the same network fully retrained from scratch. 
 
 # Further progress
-I trained a few models and of course used the recommended Adam optimizer. It speeds up the convergence at first and then slows down later not to overshoot while oscillating around an optimum.
+I trained a few models and of course used the recommended Adam optimizer. At first, it speeds up the convergence and then slows down not to overshoot while oscillating around an optimum.
 
 I wanted to check the value of the learning rate over the last epoch. I got actually crazy looking for this simple information.
-It is surpringly hard to find. Serious, I did not find it. Most methods I found returned only the INITIAL learning rate, you know, before decay and momentum. Or one very smart method could return it, because it was manually modified and easy to provide.
+It is surpringly hard to find. Serious, I could not find it. Most methods I found returned only the INITIAL learning rate, you know, before decay and momentum. Or one very smart method could return it, because it was manually modified and easy to provide.
 The only reliable way, at the end, is to manually calculate the Adam learning rate based on the formula, iteration number, decay rate and beta values. OK...
 
 Well, looking for this futile information, I have been digging into any possible Keras documentation, stackoverflow and online forums, the Keras object model, layer and optimizer variables.
