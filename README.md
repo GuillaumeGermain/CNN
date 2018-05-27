@@ -1,25 +1,30 @@
 # CNN Learning Transfer
 
-The principle is easy: optimize and accelerate the learning of a model by training specific layers,
-transfer them to a deeper model and iterate.
+The principle is easy: optimize and accelerate the learning of a model by training specific layers, transfer them to a deeper model and iterate.
 It is also useful when a model is not deep enough to get a satisfying performance.
-You can then build a deeper one, and transfer parameters of the first common layers to partially benefit from the training of the first model.
+You can build a deeper model, and transfer parameters of the first common layers to partially benefit from the training of the first model.
 
-This is relevant when the compute capacity gets insufficient compared to the needs.
-Cloud GPUS are good but at some point beyond the budget...
-This is also a good opportunity to better understand the building and training of models.
+This is relevant when the compute capacity gets insufficient compared to the needs. Cloud GPUS are a good solution but you always reach a limit and it is at some point beyond your budget...
 
-## Task list
-- [X] cleanup the readme
-- [X] display nice pics of cats/dogs in the readme
-- [X] train these models over a decent number of epochs
-- [X] reduce variance with relevant regularisation
-- [ ] push a model with 3+ conv blocks over 90% val accuracy
-- [ ] add a predict function for one picture after the training
-- [ ] display last used learning rate
+**Standard learning transfer**:
+The usual principle of learning transfer in neural networks is well known: you find an existing model with structure and parameters, let's say VGG16, Inception or MobileNet.
+You adjust the last layer and ajust the output properly to fit your business case, re-initialize the parameters of the modified layers, then retrain the network and get very quickly an effective model.
 
-## Context
-Let's train a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
+**The objective of this project is different.**
+The idea is to use learning transfer to accelerate the learning of an hand-made model.
+
+So you build a model, train it, and the model accuracy reaches a plateau. You train over many epochs, again and again, the training accuracy dance around 80% and the validation accuracy around 70%. The model structure is clealy not good enough and you want to make the model deeper. If you make it right, it will stabilize at a higher level than the current model.
+
+So you add a few layers, add a dropout or two just in case, start the training again, and the accuracy starts from 55% and increases progressively, sometime during a few epochs.
+
+All this takes time. You can go much faster by transferring parameters of the first common layers to boost the new model with the training of the previous model. It works if you can copy these parameters layer by layer.
+As a result, the new model gets from the start a good accuracy and reaches a new plateau much faster (hopefully higher...), as it does not have to re-learn the basic convolution filters from scratch.
+
+This saves many training epochs, and translates into time and money.
+This is particularly relevant when the compute capacity gets insufficient compared to your needs, and this will happen sooner that you think.
+
+## Example
+To illustrate this approach, let's take a usual case: a dog and cat classifier over 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
 Pictures from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
 
@@ -33,8 +38,8 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
 - adjusting the colors
-
-    # Set Data Generators for training and test sets    
+    
+    #Data Generators for training and test sets    
     train_datagen = ImageDataGenerator(rescale=1./255,
                                        shear_range=0.2,
                                        zoom_range=0.2,
@@ -59,12 +64,12 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
                          verbose=verbose,
                          callbacks=callback_list)
 
-This data augmentation generator produces small variations out of each original picture, and it's even done on the fly, for a best efficiency.
+This generator produces small variations out of each original picture, and it's even done on the fly, for a best efficiency.
 This leads to a much wider range of pictures and helps reducing overfitting.
 The test dataset is also augmented using the same technique.
 
-In practice, with a typical batch_size of 32, the data generator produces new variations out of each original picture.
-That means, from our original set of 8000 pictures for the training set, we actually get 256000, which is clearly better for a proper training.
+In practice, with a typical batch_size of 32, the data generator produces 32 new variations out of each original picture.
+That means, from our original set of 8000 pictures for the training set, we will actually train our model over 256000 pictures, which is clearly better.
 In my case, I use a batch_size of 16, and it still takes around 25 minutes per epoch (1 pass through the data).
 For that reason, I saved the network parameters weights to conveniently load them again and continue the training later.
 
@@ -104,7 +109,7 @@ ReLoad these weights later back into the model:
 ## Remark about the neural network and trainable parameters    
 Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures requires a lot of compute. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
 
-That's where convolution networks come handy. They contain in comparison very few parameters and, coupled with a typical max pooling, they encode important features from the picture while significantly reducing the size of the resulting feature vector.
+That's where convolution layers come handy. They contain in comparison very few parameters and, coupled with max pooling, they encode important features from the picture while significantly reducing the size of the resulting feature vector.
 
 Having a look again on the network structures:
 
@@ -147,7 +152,7 @@ The first network, though quite shallow, has already 4 millions parameters.
 The second deeper one has 1 million, 4 times less!
 Intuitively we would have expected more parameters on a deeper network, wouldn't we?
 
-Let's get why: both models have a convolution part, followed by a flattening to get a feature vector which is plugged into a standard neural network.
+Both models have a convolution part, followed by a flattening to get a feature vector which is plugged into a standard neural network.
 Most parameters are actually between this resulting feature vector and the begining of the standard neural network (dense_3 and dense_4 in tis table).
 The number of parameters between the feature vector and the first NN layer is vector dim (32768 or 8192) x number of nodes (128) + number of biases (128 again).
 
@@ -156,7 +161,7 @@ Each convolution block actually compresses the dimension of this feature vector,
 So overall, while building a CNN, adding more convolutions blocks actually means less trainable parameters.
 
 ## Model fitting and transfer
-Starting with the smaller network, I trained it and obtained a 79% accuracy rate after a few epochs.
+Starting with the smaller network, I trained it and obtained a 79% validation accuracy rate after a few epochs.
 Fair enough without a GPU, only a few epochs and not so much data.
 
 Then I added a new Convolution2D + MaxPool block and transferred as many weights as possible into the new one.
@@ -176,7 +181,7 @@ In the current example, only the first layer can be transferred.
 The 2nd is a Max Pool where there is nothing to transfer.
 The 3rd layers are already different (Conv2D vs flatten)
 
-Then in prctice, I transferred parameters layers by layer, and only the first ones.
+Then in practice, I transferred parameters layers by layer, and only the first ones.
 
 Then weights can then be transferred layer per layer, as long as they have the same type and dimension.
 In this case, only the first layer could be transferred, due to some limits.
@@ -242,7 +247,7 @@ Note that the size of files depends on the number of trainable parameters.
 Paradoxally, the more convolution blocks, the smaller the number of parameters, and the smaller the files. Yes!
 
 #### Reduce LR on plateau
-This one is also very useful.
+This feature is also very useful.
 It triggers a 80% reduction of the learning rate once a plateau has been reached, after a default "patience" of 5 epochs.
 According to the Keras documentation and a few blogs, most models benefit from it. The obvious reason is that at some point, the model dances around a local minimum and always arrives beyond, as it jumps to far, due to a too high learning rate.
 Reducing 80% this learning rate ensure smaller steps and enables getting closer to it.
