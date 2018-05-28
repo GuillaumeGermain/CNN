@@ -13,21 +13,25 @@ You adjust the last layer and ajust the output properly to fit your business cas
 **The objective of this project is different.**
 The idea is to use learning transfer to accelerate the learning of an hand-made model.
 
+## TODO
+- [ ] Fix the scripts! After many changes and experimentation, the scripts are a bit broken...
+- [ ] Add graphics about model performance evolution
+
 ## Typical NN Model building
 
 So you build a model, train it, and the model accuracy reaches a plateau. You train over many epochs, again and again, the training accuracy dance around 90% and the validation accuracy around 80%. The model structure is clearly not good enough and you want to make the model deeper. If you make it right, it will stabilize at a higher level than the current model, right.
 
-So you add a few layers, add a dropout or two just in case, start the training again, and the accuracy starts from 55% and increases progressively, sometimes during a few epochs.
+So you add a few layers, add a dropout or two just in case, start the training again, and the accuracy starts from 55% and increases progressively, sometimes during a few epochs. It's not yet there, you make more modifications, train the model again starting from a lousy performance until an accuracy plateau (if your new model is not broken => back to the drawing board!) and repeat until you get satisfying results.
 
-All this takes time. You can go much faster by transferring parameters of the first common layers to boost the new model with the training of the previous model. It works if you can copy these parameters layer by layer.
+All this takes time. A way to go much faster is by transferring parameters of the first common layers to boost the new model with the training of the previous model. It works if you can copy these parameters layer by layer.
 As a result, the new model gets from the start a good accuracy and reaches a new plateau much faster (hopefully higher...), as it does not have to re-learn the basic convolution filters from scratch.
 
 This saves many training epochs, and translates into time and money.
 This is particularly relevant when the compute capacity gets insufficient compared to your needs, and this will happen sooner than you think.
 
 ## Example
-To illustrate this approach, let's take an usual case: a dog and cat classifier.
-You start with 10000 pictures (5000 dogs, 5000 cats).
+To illustrate this approach, let's take a simple case: a dog and cat classifier.
+We start with 10000 pictures (5000 dogs, 5000 cats).
 8000 are used for training (+ data augmentation) and 2000 for testing.
 Pictures from the [CIFAR10 datasets](https://www.cs.toronto.edu/~kriz/cifar.html)
 
@@ -41,8 +45,9 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
 - adjusting the colors
-    
-    #Data Generators for training and test sets    
+
+```
+    # Data Generators for training and test sets    
     train_datagen = ImageDataGenerator(rescale=1./255,
                                        shear_range=0.2,
                                        zoom_range=0.2,
@@ -66,7 +71,7 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
                          initial_epoch=initial_epoch,
                          verbose=verbose,
                          callbacks=callback_list)
-
+```
 This generator produces small variations out of each original picture, and it's even done on the fly for a better efficiency.
 This leads to a much wider range of pictures and reduces overfitting.
 The test dataset is also augmented using the same technique.
