@@ -47,30 +47,30 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 - adjusting the colors
 
 ```
-    # Data Generators for training and test sets    
-    train_datagen = ImageDataGenerator(rescale=1./255,
-                                       shear_range=0.2,
-                                       zoom_range=0.2,
-                                       horizontal_flip=True)
-    
-    test_datagen = ImageDataGenerator(rescale=1./255)
-    
-    training_set = train_datagen.flow_from_directory('dataset/training_set',
-                                                     target_size=(64, 64),
-                                                     batch_size=batch_size,
-                                                     class_mode='binary')
-    test_set = test_datagen.flow_from_directory('dataset/test_set',
-                                                target_size=(64, 64),
-                                                batch_size=batch_size
-                                                class_mode='binary')
-    history = model.fit_generator(training_set,
-                         steps_per_epoch=train_size,
-                         epochs=initial_epoch + new_epochs,
-                         validation_data=test_set,
-                         validation_steps=test_size,
-                         initial_epoch=initial_epoch,
-                         verbose=verbose,
-                         callbacks=callback_list)
+# Data Generators for training and test sets    
+train_datagen = ImageDataGenerator(rescale=1./255,
+                                   shear_range=0.2,
+                                   zoom_range=0.2,
+                                   horizontal_flip=True)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+training_set = train_datagen.flow_from_directory('dataset/training_set',
+                                                 target_size=(64, 64),
+                                                 batch_size=batch_size,
+                                                 class_mode='binary')
+test_set = test_datagen.flow_from_directory('dataset/test_set',
+                                            target_size=(64, 64),
+                                            batch_size=batch_size
+                                            class_mode='binary')
+history = model.fit_generator(training_set,
+                     steps_per_epoch=train_size,
+                     epochs=initial_epoch + new_epochs,
+                     validation_data=test_set,
+                     validation_steps=test_size,
+                     initial_epoch=initial_epoch,
+                     verbose=verbose,
+                     callbacks=callback_list)
 ```
 This generator produces small variations out of each original picture, and it's even done on the fly for a better efficiency.
 This leads to a much wider range of pictures and reduces overfitting.
