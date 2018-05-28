@@ -115,7 +115,7 @@ ReLoad these weights later back into the model:
     classifier_1 = load_model(filename)
 
 ## Remark about the neural network and trainable parameters    
-Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures requires a lot of compute. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
+Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures requires a lot of computing. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
 
 That's where convolution layers come handy. They contain in comparison very few parameters and, coupled with max pooling, they encode important features from the picture while significantly reducing the size of the resulting feature vector.
 
