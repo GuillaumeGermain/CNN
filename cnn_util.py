@@ -43,8 +43,9 @@ def print_file_layers(filename):
 
 def print_model_layers(model):
     # classifier 1 layers
-
-    print(model.model.name + " layers")
+    
+    if model.name is not None:
+        print(model.name + " layers")
     for layer in model.layers:
         print(layer.name.ljust(20), type(layer))
 
@@ -200,7 +201,7 @@ def train_model(model, new_epochs, initial_epoch=0,
     metric_list = ['accuracy']
     
     # Add checkpoints to save weights in case the test set acc improved
-    filepath = "models/" + model.name + "-weights-improvement-{epoch:02d}-{val_acc:.3f}.h5"
+    filepath = "models/" + model.name + "-epoch-{epoch:02d}-{val_acc:.3f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max', verbose=0)
     callback_list.append(checkpoint)
 
@@ -219,7 +220,6 @@ def train_model(model, new_epochs, initial_epoch=0,
                          initial_epoch=initial_epoch,
                          verbose=verbose,
                          callbacks=callback_list)
-    model.save_weights("classifier2_1.h5")
     return history
 
 if __name__ == "__main__":
