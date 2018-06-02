@@ -1,6 +1,6 @@
 # CNN Learning Transfer
 
-The principle is easy: optimize and accelerate the learning of a model by training specific layers, transfer them to a deeper model and iterate.
+The principle is easy: optimize and accelerate the learning of a convolution network model by training specific layers, transfer them to a deeper model and iterate.
 It is also useful when a model is not deep enough to get a satisfying performance.
 You can build a deeper model, and transfer parameters of the first common layers to partially benefit from the training of the first model.
 
@@ -8,7 +8,7 @@ This is relevant when the compute capacity gets insufficient compared to the nee
 
 **Standard learning transfer**:
 The usual principle of learning transfer in neural networks is well known: you find an existing model with structure and parameters, let's say VGG16, Inception or MobileNet.
-You adjust the last layer and ajust the output properly to fit your business case, re-initialize the parameters of the modified layers, then retrain the network and get very quickly an effective model.
+You adjust the last layer and the output properly to fit your business case, re-initialize the parameters of the modified layers, then retrain the network and get very quickly an effective model.
 
 **The objective of this project is different.**
 The idea is to use learning transfer to accelerate the learning of an hand-made model.
@@ -41,7 +41,7 @@ Yes my friends, a big bunch of cute cat and dog pictures like this:
 <img src="dataset/training_set/dogs/dog.998.jpg" width="100" height="120"><img src="dataset/training_set/dogs/dog.2.jpg" width="100" height="120">
 
 ## Data augmentation
-10000 pictures is actually not a lot for a computer vision task. That's why we multiplicate the existing data with a range of simple techniques:
+10000 pictures is actually not that much for a computer vision task. That's why we multiplicate the existing data with a range of simple techniques:
 - mirroring pictures left-right (effectively doubling the dataset size)
 - random cropping/zooming
 - adjusting the colors
@@ -111,11 +111,17 @@ Storing the trained weights of a classifier model into a file is useful to reloa
     
 ReLoad these weights later back into the model:
 
+    classifier_1.load_weights(filename)
+
+By the way you can also save the whole model, structure + weights:
+
+    classifier_1.save(filename)
+    
     from keras.models import load_model
-    classifier_1 = load_model(filename)
+    classifier_1 = load_weights(filename)
 
 ## Remark about the neural network and trainable parameters    
-Who has taken a Computer Vision course or made a few tutorials on the topic, knows that pictures requires a lot of computing. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
+If you have taken a Computer Vision course or made a few tutorials on the topic, you know that pictures requires a lot of computing. 64x64 format is quite small for pictures, and it has already 12228 dimensions. Plug directly a standard neural network on that, with say 1000 nodes, and you already have 12M parameters. This would moreover output results based on exact pixel positions, which is really not desirable.
 
 That's where convolution layers come handy. They contain in comparison very few parameters and, coupled with max pooling, they encode important features from the picture while significantly reducing the size of the resulting feature vector.
 
@@ -161,12 +167,13 @@ The second deeper one has 1 million, 4 times less!
 Intuitively we would have expected more parameters on a deeper network, wouldn't we?
 
 Both models have a convolution part, followed by a flattening to get a feature vector which is plugged into a standard neural network.
-Most parameters are actually between this resulting feature vector and the begining of the standard neural network (dense_3 and dense_4 in tis table).
+You can see it in the second-to-last row of both summaries.
+Most parameters are between the flattened feature vector and the beginning of the standard neural network (dense_3 and dense_4 in this table).
 The number of parameters between the feature vector and the first NN layer is vector dim (32768 or 8192) x number of nodes (128) + number of biases (128 again).
 
 Each convolution block actually compresses the dimension of this feature vector, by a factor 4.
 
-So overall, while building a CNN, adding more convolutions blocks actually means less trainable parameters.
+So overall, adding more convolutions blocks means less trainable parameters.
 
 ## Model fitting and weights transfer
 Starting with the smaller network, I trained it and obtained a 79% validation accuracy rate after a few epochs.
@@ -178,24 +185,28 @@ A full copy from a model to another identical model is actually quite easy.
 ### Limits of weight transfer
 We cannnot transfer weights between models with different structures.
 The transfer actually works layer by layer, and only if the layer type and dimensions correspond.
-You cannot transfer a Dense layer to a Maxconvolution layer for instance.
+You cannot transfer a Dense layer to a Max Pooling or Convolution layer for instance.
 
 - Some layers like MaxPool and Flatten don't have trainable parameters, so we can simply ignore them.
 - Basically, if you change anything at the beginning of the model, you lose the capacity to transfer anything after this layer. This is a serious limitation.
 
 So you start with the first layer, transfer parameters, and continue layer by layer until you meet a different type of layer.
 
+    # Transfer the first convolution layer weights
     model_new.layers[0].set_weights(classifier_1.layers[0].get_weights())
+    # Transfer the second convolution layer weights
+    model_new.layers[2].set_weights(classifier_1.layers[2].get_weights())
+    ...
 
 In the current example, only the first layer can be transferred.
 The 2nd is a Max Pool where there is nothing to transfer.
 The 3rd layers are already different (Conv2D vs flatten)
 
-Then in practice, I transferred parameters layers by layer, and only the first ones.
+In practice, I transferred parameters layers by layer, and only the first ones.
 
 Then weights can then be transferred layer per layer, as long as they have the same type and dimension.
 In this case, only the first layer could be transferred, due to some limits.
-- Max Pooling has no trainable parameters, so nothing to transfer
+- Max Pooling has no trainable parameters, nothing to transfer
 - Flattening just flattens a rank 2 matrix into a flat vector, of course no trainable parameters.
 - After the new convolution block in the new model, the feature vector size reduced from 32K to 8K. Dimensions differ, this layer cannot be transferred
 - It does not make any sense to transfer the last layer as it is based on completely different layers.
@@ -213,10 +224,10 @@ This advantage did last over a few training epochs.
 The validation accuracy ended up 3% higher, compared to the same network fully retrained from scratch. 
 
 # Further progress
-I trained a few models and of course used the recommended Adam optimizer. At first, it speeds up the convergence and then slows down not to overshoot while oscillating around an optimum.
+I trained a few models and of course used the recommended Adam optimizer. At first, Adam speeds up the convergence and then slows down not to overshoot while oscillating around an optimum.
 
 I wanted to check the value of the learning rate over the last epoch. I got actually crazy looking for this simple information.
-It is surpringly hard to find. Serious, I could not find it. Most methods I found returned only the INITIAL learning rate, you know, before decay and momentum. Or one very smart method could return it, because it was manually modified and easy to provide.
+It is surpringly hard to find. Seriously, I could not find it. Most methods I found returned only the INITIAL learning rate, you know, before decay and momentum. Or one very smart method could return it, because it was manually modified and easy to provide.
 The only reliable way, at the end, is to manually calculate the Adam learning rate based on the formula, iteration number, decay rate and beta values. OK...
 
 Well, looking for this futile information, I have been digging into any possible Keras documentation, stackoverflow and online forums, the Keras object model, layer and optimizer variables.
@@ -241,7 +252,7 @@ The initial learning rate is for instance located **here**:
 This one is my holy grail. Really useful.
 How to train models days and nights on my petty CPU and it automatically saves the best models without fearing power outages or bad manipulations/keystrokes.
 
-    filepath = model.name + "-weights-improvement-{epoch:02d}-{val_acc:.2f}.h5"
+    filepath = model.name + "-epoch-{epoch:02d}-{val_acc:.3f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', save_best_only=True, mode='max')
     callback_list.append(checkpoint)
     
@@ -254,7 +265,7 @@ How to train models days and nights on my petty CPU and it automatically saves t
                          callbacks=callback_list)
 
 Note that the size of files depends on the number of trainable parameters.
-Paradoxally, the more convolution blocks, the smaller the number of parameters, and the smaller the files. Yes!
+Paradoxally, the more convolution blocks, the smaller the number of trainable parameters, and the smaller the files. Yes!
 
 #### Reduce LR on plateau
 This feature is also very useful.
@@ -278,5 +289,9 @@ Reducing 80% this learning rate ensure smaller steps and enables getting closer 
                          initial_epoch=initial_epoch,
                          callbacks=callback_list)
 
-So damn simple...
+I tried it. In my current configuration, it did not seem to make a significant difference, but I am pretty sure that it is good to have it in the toolbox.
+
+Another useful tool, not described here, is the EarlyStopping Callback.
+It basically stops the training if a measured metric has not improved over a so-called "patience", number of epochs.
+It is very useful to train a group of models to stop those whose performance is obviously not improving and focus on the most promising ones.
 
